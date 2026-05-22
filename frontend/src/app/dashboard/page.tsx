@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/store/useStore';
 import { api } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useDropzone } from 'react-dropzone';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { BrainCircuit, UploadCloud, FileText, Loader2, MessageSquare, LogOut, Trash2 } from 'lucide-react';
+import { BrainCircuit, BookOpen, Clock, Activity, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import Sidebar from '@/components/Sidebar';
+import UploadDropzone from '@/components/UploadDropzone';
+import DocumentCard from '@/components/DocumentCard';
 import Link from 'next/link';
 
 interface Document {
@@ -18,18 +20,35 @@ interface Document {
   created_at: string;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+};
+
 export default function DashboardPage() {
   const token = useStore((state) => state.token);
-  const logout = useStore((state) => state.logout);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [uploadError, setUploadError] = useState('');
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (!token) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && !token) {
       router.push('/login');
     }
-  }, [token, router]);
+  }, [token, router, mounted]);
 
   const { data: documents, isLoading: isLoadingDocs } = useQuery<Document[]>({
     queryKey: ['documents'],
@@ -67,131 +86,117 @@ export default function DashboardPage() {
     }
   });
 
-  const onDrop = (acceptedFiles: File[]) => {
+  const handleDrop = (acceptedFiles: File[]) => {
     setUploadError('');
     if (acceptedFiles.length > 0) {
       uploadMutation.mutate(acceptedFiles[0]);
     }
   };
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'application/pdf': ['.pdf'],
-      'text/plain': ['.txt']
-    },
-    maxFiles: 1,
-  });
-
-  if (!token) return null;
+  if (!mounted || !token) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950">
-      <header className="px-6 h-16 flex items-center border-b border-white/10 bg-black/50 sticky top-0 z-50">
-        <Link className="flex items-center gap-2" href="/dashboard">
-          <BrainCircuit className="h-6 w-6 text-indigo-500" />
-          <span className="font-bold text-xl tracking-tighter">DronaAI</span>
-        </Link>
-        <div className="ml-auto flex items-center gap-4">
-          <Link href="/chat">
-            <Button variant="outline" className="border-white/10 hover:bg-white/5">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Chat
-            </Button>
-          </Link>
-          <Button variant="ghost" onClick={() => { logout(); router.push('/'); }}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-      </header>
+    <div className="flex h-screen bg-[#0A0F1C] overflow-hidden selection:bg-blue-500/30">
+      <Sidebar />
 
-      <main className="flex-1 p-6 lg:p-12 max-w-6xl mx-auto w-full grid gap-8 md:grid-cols-[1fr_300px]">
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight mb-2">Dashboard</h1>
-            <p className="text-zinc-400">Upload and manage your study materials.</p>
-          </div>
+      <main className="flex-1 overflow-y-auto">
+        <div className="p-8 lg:p-12 max-w-7xl mx-auto w-full">
+          
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-10 flex items-end justify-between"
+          >
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight text-slate-100 mb-2">Welcome back</h1>
+              <p className="text-slate-400 text-lg">Manage your study materials and track your AI interactions.</p>
+            </div>
+            <div className="hidden md:flex items-center gap-2 bg-blue-500/10 text-blue-400 px-4 py-2 rounded-full border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+              <Activity className="h-4 w-4" />
+              <span className="text-sm font-medium">System Online</span>
+            </div>
+          </motion.div>
 
-          <Card className="bg-white/5 border-white/10">
-            <CardHeader>
-              <CardTitle>Upload New Material</CardTitle>
-              <CardDescription>Drag and drop your PDF or TXT files here.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div 
-                {...getRootProps()} 
-                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-colors ${
-                  isDragActive ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
-                }`}
-              >
-                <input {...getInputProps()} />
-                {uploadMutation.isPending ? (
-                  <div className="flex flex-col items-center">
-                    <Loader2 className="h-10 w-10 text-indigo-500 animate-spin mb-4" />
-                    <p className="text-sm text-zinc-400">Uploading and processing document...</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <div className="p-4 bg-white/5 rounded-full mb-4">
-                      <UploadCloud className="h-8 w-8 text-indigo-400" />
-                    </div>
-                    <p className="text-base font-medium">Click to upload or drag and drop</p>
-                    <p className="text-sm text-zinc-400 mt-1">PDF or TXT (max. 10MB)</p>
-                  </div>
-                )}
-              </div>
-              {uploadError && (
-                <p className="text-red-400 text-sm mt-4 text-center">{uploadError}</p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+          >
+            {/* Bento Grid: Stats Cards */}
+            <motion.div variants={itemVariants} className="col-span-1 md:col-span-1 lg:col-span-1">
+              <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl h-full hover:bg-[#161F32] transition-colors duration-300">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-blue-400" />
+                    Total Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-4xl font-bold text-slate-100">{documents?.length || 0}</div>
+                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                    <Clock className="h-3 w-3" /> Updated just now
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-        <div className="space-y-6">
-          <Card className="bg-white/5 border-white/10 h-[calc(100vh-12rem)] flex flex-col">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-indigo-400" />
-                Your Documents
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-hidden p-0">
-              <ScrollArea className="h-full px-6 pb-6">
-                {isLoadingDocs ? (
-                  <div className="flex justify-center p-4">
-                    <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
-                  </div>
-                ) : documents?.length === 0 ? (
-                  <p className="text-sm text-zinc-400 text-center py-8">No documents uploaded yet.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {documents?.map((doc) => (
-                      <div key={doc.id} className="p-3 rounded-lg bg-white/5 border border-white/5 hover:bg-white/10 transition-colors flex items-center justify-between gap-4 group">
-                        <div className="flex flex-col gap-1 overflow-hidden">
-                          <span className="text-sm font-medium truncate" title={doc.filename}>{doc.filename}</span>
-                          <span className="text-xs text-zinc-500">{new Date(doc.created_at).toLocaleDateString()}</span>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-zinc-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => deleteMutation.mutate(doc.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          {deleteMutation.isPending && deleteMutation.variables === doc.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-4 w-4" />
-                          )}
-                        </Button>
+            {/* Bento Grid: Upload Card */}
+            <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-3">
+              <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl h-full border-t border-t-blue-500/20">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-slate-100">Intelligent Ingestion</CardTitle>
+                  <CardDescription className="text-slate-400">Upload materials to instantly chunk, embed, and index them via our FAISS RAG pipeline.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <UploadDropzone 
+                    onDrop={handleDrop} 
+                    isPending={uploadMutation.isPending} 
+                    error={uploadError} 
+                  />
+                </CardContent>
+              </Card>
+            </motion.div>
+
+            {/* Bento Grid: Documents List */}
+            <motion.div variants={itemVariants} className="col-span-1 md:col-span-3 lg:col-span-4 mt-6">
+              <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl flex flex-col min-h-[400px]">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+                    <BrainCircuit className="h-5 w-5 text-indigo-400" />
+                    Indexed Materials
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-1 p-0">
+                  <ScrollArea className="h-[350px] px-6 pb-6">
+                    {isLoadingDocs ? (
+                      <div className="flex flex-col items-center justify-center h-40 space-y-4">
+                        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
                       </div>
-                    ))}
-                  </div>
-                )}
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                    ) : documents?.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center h-40 text-slate-500 border-2 border-dashed border-white/5 rounded-2xl mx-2">
+                        <BookOpen className="h-8 w-8 mb-2 opacity-50" />
+                        <p className="text-sm">No documents found. Upload one to get started.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {documents?.map((doc) => (
+                          <DocumentCard 
+                            key={doc.id} 
+                            id={doc.id}
+                            filename={doc.filename}
+                            createdAt={doc.created_at}
+                            isDeleting={deleteMutation.isPending && deleteMutation.variables === doc.id}
+                            onDelete={(id) => deleteMutation.mutate(id)}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
       </main>
     </div>
