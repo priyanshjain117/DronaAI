@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
@@ -16,8 +16,23 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const token = useStore((state) => state.token);
   const setToken = useStore((state) => state.setToken);
+  const setUser = useStore((state) => state.setUser);
   const router = useRouter();
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    if (mounted && token) {
+      const next = new URLSearchParams(window.location.search).get('next') || '/dashboard';
+      router.push(next);
+    }
+  }, [mounted, token, router]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,30 +42,35 @@ export default function SignupPage() {
     try {
       const response = await api.post('/auth/signup', { email, password });
       setToken(response.data.access_token);
-      router.push('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create account');
+      setUser(response.data.user);
+      const next = new URLSearchParams(window.location.search).get('next') || '/dashboard';
+      router.push(next);
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { detail?: string } } };
+      setError(apiError.response?.data?.detail || 'Failed to create account');
     } finally {
       setLoading(false);
     }
   };
 
+  if (!mounted) return null;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-950 p-4 relative overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-purple-600/20 rounded-full blur-[120px] -z-10" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] p-4 relative overflow-hidden">
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] -z-10" />
       
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2">
-            <BrainCircuit className="h-8 w-8 text-indigo-500" />
-            <span className="font-bold text-2xl tracking-tighter text-white">DronaAI</span>
+            <BrainCircuit className="h-8 w-8 text-orange-500" />
+            <span className="font-bold text-2xl tracking-tight text-white">DronaAI</span>
           </Link>
         </div>
 
         <Card className="bg-white/5 border-white/10 backdrop-blur-xl text-white">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold tracking-tight">Create an account</CardTitle>
-            <CardDescription className="text-zinc-400">
+            <CardDescription className="text-slate-400">
               Enter your email below to create your account
             </CardDescription>
           </CardHeader>
@@ -62,23 +82,23 @@ export default function SignupPage() {
                 </div>
               )}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-zinc-300">Email</Label>
+                <Label htmlFor="email" className="text-slate-300">Email</Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="name@example.com"
-                  className="bg-white/5 border-white/10 focus-visible:ring-indigo-500"
+                  className="bg-white/5 border-white/10 focus-visible:ring-orange-500"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-zinc-300">Password</Label>
+                <Label htmlFor="password" className="text-slate-300">Password</Label>
                 <Input
                   id="password"
                   type="password"
-                  className="bg-white/5 border-white/10 focus-visible:ring-indigo-500"
+                  className="bg-white/5 border-white/10 focus-visible:ring-orange-500"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -88,14 +108,14 @@ export default function SignupPage() {
             <CardFooter className="flex flex-col gap-4">
               <Button 
                 type="submit" 
-                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" 
+                className="w-full bg-orange-600 hover:bg-orange-500 text-white" 
                 disabled={loading}
               >
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sign up'}
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Create account'}
               </Button>
-              <p className="text-sm text-center text-zinc-400">
+              <p className="text-sm text-center text-slate-400">
                 Already have an account?{' '}
-                <Link href="/login" className="text-indigo-400 hover:text-indigo-300 hover:underline">
+                <Link href="/login" className="text-orange-400 hover:text-orange-300 hover:underline">
                   Sign in
                 </Link>
               </p>

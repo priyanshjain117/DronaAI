@@ -1,74 +1,314 @@
 'use client';
 
+import { useState, useEffect, Suspense, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { BrainCircuit, MessageSquare, LayoutDashboard, PlusCircle, LogOut } from 'lucide-react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import {
+  BrainCircuit,
+  MessageSquare,
+  LayoutDashboard,
+  Plus,
+  LogOut,
+  Menu,
+  X,
+  Trash2,
+  Search,
+  PanelLeftClose,
+  PanelLeftOpen,
+  FileText,
+} from 'lucide-react';
 import { useStore } from '@/store/useStore';
-import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '@/services/api';
+import { formatTimestamp } from '@/lib/formatDate';
 
-export default function Sidebar() {
+interface ChatSessionItem {
+  id: number;
+  title: string;
+  updated_at: string;
+  message_count: number;
+  document_id?: number | null;
+  documents?: { id: number; filename: string }[];
+}
+
+interface DocumentItem {
+  id: number;
+  filename: string;
+  created_at: string;
+}
+
+function SidebarInner() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeSessionId = searchParams.get('session');
   const logout = useStore((state) => state.logout);
+  const token = useStore((state) => state.token);
+  const collapsed = useStore((state) => state.sidebarCollapsed);
+  const setCollapsed = useStore((state) => state.setSidebarCollapsed);
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const { data: sessions = [] } = useQuery<ChatSessionItem[]>({
+    queryKey: ['chat-sessions'],
+    queryFn: async () => {
+      const { data } = await api.get('/sessions/');
+      return data;
+    },
+    enabled: !!token,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: documents = [] } = useQuery<DocumentItem[]>({
+    queryKey: ['documents'],
+    queryFn: async () => {
+      const { data } = await api.get('/upload/');
+      return data;
+    },
+    enabled: !!token,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+
+  const filteredSessions = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    if (!normalized) return sessions;
+    return sessions.filter((session) => session.title.toLowerCase().includes(normalized));
+  }, [query, sessions]);
+
+  const filteredDocuments = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    const docs = normalized
+      ? documents.filter((document) => document.filename.toLowerCase().includes(normalized))
+      : documents;
+    return docs.slice(0, 6);
+  }, [documents, query]);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/sessions/${id}`);
+    },
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+      if (activeSessionId === String(id)) router.push('/chat');
+    },
+  });
 
   const handleLogout = () => {
     logout();
+    queryClient.clear();
     router.push('/');
   };
 
-  return (
-    <aside className="w-64 border-r border-white/5 bg-[#0A0F1C]/80 backdrop-blur-xl h-screen sticky top-0 flex flex-col hidden md:flex shrink-0">
-      <div className="p-6">
-        <Link className="flex items-center gap-2 mb-8" href="/dashboard">
-          <BrainCircuit className="h-7 w-7 text-blue-500" />
-          <span className="font-bold text-xl tracking-tight text-slate-100">DronaAI</span>
-        </Link>
+  const handleNewChat = () => {
+    router.push('/chat');
+    setMobileOpen(false);
+  };
 
-        <Link href="/chat">
-          <button className="w-full bg-blue-600 hover:bg-blue-500 text-white rounded-xl py-3 px-4 flex items-center justify-center gap-2 font-medium transition-all shadow-lg shadow-blue-500/20 active:scale-95">
-            <PlusCircle className="h-5 w-5" />
-            New Chat
+  useEffect(() => {
+    const id = window.setTimeout(() => setMobileOpen(false), 0);
+    return () => window.clearTimeout(id);
+  }, [pathname, searchParams]);
+
+  const sidebarContent = (
+    <>
+      <div className="p-4">
+        <div className="mb-5 flex items-center justify-between gap-2">
+          <Link className="flex min-w-0 items-center gap-2" href="/dashboard" onClick={() => setMobileOpen(false)}>
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-500/10 ring-1 ring-orange-500/20">
+              <BrainCircuit className="h-5 w-5 text-orange-400" />
+            </div>
+            {!collapsed && <span className="truncate text-lg font-bold tracking-tight text-slate-100">DronaAI</span>}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden rounded-lg p-2 text-slate-500 transition hover:bg-white/5 hover:text-slate-200 md:grid"
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </button>
-        </Link>
-      </div>
+        </div>
 
-      <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
-        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-4 px-2">Menu</div>
-        
-        <Link 
-          href="/dashboard"
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-            pathname === '/dashboard' 
-              ? 'bg-blue-500/10 text-blue-400 font-medium' 
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+        <button
+          onClick={handleNewChat}
+          className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-3 font-semibold text-white shadow-lg shadow-orange-500/15 transition hover:brightness-110 active:scale-[0.98] ${
+            collapsed ? 'px-0' : ''
           }`}
         >
-          <LayoutDashboard className="h-5 w-5" />
-          Dashboard
-        </Link>
-
-        <Link 
-          href="/chat"
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-            pathname === '/chat' 
-              ? 'bg-blue-500/10 text-blue-400 font-medium' 
-              : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
-          }`}
-        >
-          <MessageSquare className="h-5 w-5" />
-          Chats
-        </Link>
-      </nav>
-
-      <div className="p-4 border-t border-white/5">
-        <button 
-          onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-        >
-          <LogOut className="h-5 w-5" />
-          Logout
+          <Plus className="h-5 w-5" />
+          {!collapsed && 'New Chat'}
         </button>
       </div>
-    </aside>
+
+      <nav className="flex-1 overflow-y-auto px-3 pb-4">
+        {!collapsed && (
+          <div className="relative mb-4">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search chats and notes"
+              className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-9 pr-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/10"
+            />
+          </div>
+        )}
+
+        <div className="space-y-1">
+          <Link
+            href="/dashboard"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
+              pathname === '/dashboard'
+                ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/20'
+                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+            } ${collapsed ? 'justify-center px-0' : ''}`}
+          >
+            <LayoutDashboard className="h-5 w-5 shrink-0" />
+            <span className={`${collapsed ? 'sr-only' : ''}`}>Dashboard</span>
+          </Link>
+
+          <Link
+            href="/chat"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
+              pathname === '/chat' && !activeSessionId
+                ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/20'
+                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+            } ${collapsed ? 'justify-center px-0' : ''}`}
+          >
+            <MessageSquare className="h-5 w-5 shrink-0" />
+            <span className={`${collapsed ? 'sr-only' : ''}`}>Chats</span>
+          </Link>
+        </div>
+
+        {!collapsed && filteredDocuments.length > 0 && (
+          <div className="mt-6">
+            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Uploaded Notes</div>
+            <div className="space-y-1">
+              {filteredDocuments.map((document) => (
+                <Link
+                  href={`/chat?document=${document.id}`}
+                  key={document.id}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+                >
+                  <FileText className="h-4 w-4 shrink-0 text-orange-400" />
+                  <span className="truncate">{document.filename}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!collapsed && (
+          <div className="mt-6">
+            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Recent Chats</div>
+            <div className="space-y-1">
+              {filteredSessions.slice(0, 24).map((session) => (
+                <div key={session.id} className="group relative">
+                  <Link
+                    href={`/chat?session=${session.id}`}
+                    onClick={() => setMobileOpen(false)}
+                    className={`block rounded-xl px-3 py-2.5 pr-10 transition ${
+                      activeSessionId === String(session.id)
+                        ? 'bg-orange-500/10 text-orange-200 ring-1 ring-orange-500/20'
+                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                    }`}
+                  >
+                    <div className="truncate text-sm font-medium">{session.title}</div>
+                    <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                      <span>{session.message_count} msgs</span>
+                      <span>&bull;</span>
+                      <span>{session.documents?.length || 0} notes</span>
+                    </div>
+                    <div className="mt-0.5 truncate text-xs text-slate-600">
+                      {session.documents?.map((document) => document.filename).join(', ') ||
+                        formatTimestamp(session.updated_at)}
+                    </div>
+                  </Link>
+                  <button
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      deleteMutation.mutate(session.id);
+                    }}
+                    className="absolute right-2 top-1/2 rounded-lg p-1.5 text-slate-500 opacity-0 transition hover:bg-red-500/10 hover:text-red-400 group-hover:opacity-100"
+                    aria-label="Delete chat"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              {filteredSessions.length === 0 && (
+                <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-slate-500">
+                  No matching chats yet.
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      <div className="border-t border-white/5 p-3">
+        <button
+          onClick={handleLogout}
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition hover:bg-red-500/10 hover:text-red-400 ${
+            collapsed ? 'justify-center px-0' : ''
+          }`}
+        >
+          <LogOut className="h-5 w-5" />
+          <span className={`${collapsed ? 'sr-only' : ''}`}>Logout</span>
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="fixed left-4 top-4 z-50 rounded-xl border border-white/10 bg-[#111827]/90 p-2 text-slate-300 shadow-xl backdrop-blur transition hover:text-white md:hidden"
+        aria-label="Open menu"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 flex md:hidden">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="relative flex h-dvh w-[min(86vw,320px)] flex-col border-r border-white/10 bg-[#0B0F19] shadow-2xl animate-in slide-in-from-left duration-300">
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              aria-label="Close menu"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            {sidebarContent}
+          </aside>
+        </div>
+      )}
+
+      <aside
+        className={`hidden h-screen shrink-0 flex-col border-r border-white/8 bg-[#0B0F19]/92 shadow-2xl shadow-black/20 backdrop-blur-xl transition-[width] duration-300 md:flex ${
+          collapsed ? 'w-[76px]' : 'w-[286px]'
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+    </>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <Suspense fallback={null}>
+      <SidebarInner />
+    </Suspense>
   );
 }

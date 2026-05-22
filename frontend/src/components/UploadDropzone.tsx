@@ -25,19 +25,19 @@ export default function UploadDropzone({ onDrop, isPending, error }: UploadDropz
         {...getRootProps()} 
         className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 ${
           isDragActive 
-            ? 'border-blue-500 bg-blue-500/10 shadow-[0_0_30px_rgba(59,130,246,0.15)]' 
+            ? 'border-orange-500 bg-orange-500/10 shadow-[0_0_30px_rgba(249,115,22,0.15)]' 
             : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
         }`}
       >
         <input {...getInputProps()} />
         {isPending ? (
           <div className="flex flex-col items-center animate-in fade-in">
-            <Loader2 className="h-10 w-10 text-blue-500 animate-spin mb-4" />
+            <Loader2 className="h-10 w-10 text-orange-500 animate-spin mb-4" />
             <p className="text-sm text-slate-400 font-medium">Processing document securely...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className={`p-4 rounded-full mb-4 transition-colors ${isDragActive ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-800/50 text-slate-400'}`}>
+            <div className={`p-4 rounded-full mb-4 transition-colors ${isDragActive ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800/50 text-slate-400'}`}>
               <UploadCloud className="h-8 w-8" />
             </div>
             <p className="text-base font-medium text-slate-200">

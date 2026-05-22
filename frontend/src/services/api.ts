@@ -14,3 +14,23 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const url = String(error?.config?.url || '');
+    const isAuthRequest = url.includes('/auth/login') || url.includes('/auth/signup');
+
+    if (status === 401 && !isAuthRequest) {
+      useStore.getState().logout();
+
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        const next = `${window.location.pathname}${window.location.search}`;
+        window.location.href = `/login?next=${encodeURIComponent(next)}`;
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
