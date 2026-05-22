@@ -3,7 +3,6 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import os
 
 from db.session import get_db
 from models.user import User
@@ -17,7 +16,7 @@ class TokenData(BaseModel):
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
+        detail="Your session has expired or is invalid. Please sign in again.",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
@@ -28,7 +27,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         token_data = TokenData(user_id=user_id)
     except JWTError:
         raise credentials_exception
-    user = db.query(User).filter(User.id == int(token_data.user_id)).first()
+    try:
+        user_id_int = int(token_data.user_id)
+    except (TypeError, ValueError):
+        raise credentials_exception
+
+    user = db.query(User).filter(User.id == user_id_int).first()
     if user is None:
         raise credentials_exception
     return user
