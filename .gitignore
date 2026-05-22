@@ -1,0 +1,28 @@
+# DronaAI Root .gitignore
+
+# Python/Backend
+server/venv/
+server/__pycache__/
+server/*.pyc
+server/.env
+server/drona_ai.db
+server/uploads/
+server/rag/vectorstore/faiss_index/
+
+# Mac OS
+.DS_Store
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Next.js/Frontend (just in case, though frontend has its own .gitignore)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env.local
+frontend/.env.development.local
+frontend/.env.test.local
+frontend/.env.production.local
