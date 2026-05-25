@@ -70,8 +70,8 @@ DronaAI introduces a workspace-based AI study system:
 - Preserve sessions, citations, and retrieval plans.
 
 The result is a serious AI-powered study environment, not a one-off document chatbot.
-
 ---
+DEMO LINK: https://drive.google.com/file/d/145DxTN_JMlPLHVOKwZJ18jzLLabny6UZ/view?usp=share_link
 
 ## Key Features
 
