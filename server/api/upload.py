@@ -7,7 +7,7 @@ import json
 
 from db.session import get_db
 from models.user import User
-from models.document import Document, DocumentChunk
+from models.document import Document, DocumentChunk, DocumentGroup
 from models.chat import ChatSession
 from api.deps import get_current_user
 from rag.pipeline import process_and_store_document_async, delete_document_from_vectorstore
@@ -121,6 +121,7 @@ async def upload_document(
 
         db.commit()
     except Exception as e:
+        db.rollback()
         delete_document_from_vectorstore(document.id, current_user.id)
         db.query(DocumentChunk).filter(DocumentChunk.document_id == document.id).delete()
         db.delete(document)
@@ -187,6 +188,7 @@ async def reindex_document(
     try:
         num_chunks = await _index_document(db, document, current_user)
     except Exception as e:
+        db.rollback()
         document.status = "failed"
         db.commit()
         raise HTTPException(status_code=500, detail=f"Error reindexing document: {str(e)}")
@@ -234,6 +236,10 @@ def delete_document(
             session.active_document_ids = json.dumps(remaining_ids)
             if session.document_id == document_id:
                 session.document_id = remaining_ids[0] if remaining_ids else None
+
+    groups = db.query(DocumentGroup).filter(DocumentGroup.user_id == current_user.id).all()
+    for group in groups:
+        group.documents = [item for item in group.documents if item.id != document_id]
 
     db.delete(document)
     db.commit()

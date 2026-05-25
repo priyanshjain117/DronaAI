@@ -11,7 +11,7 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from api.deps import get_current_user
 from models.user import User
 from models.chat import ChatSession, ChatMessage, RetrievalMetadata
-from models.document import Document
+from models.document import Document, DocumentGroup
 from db.session import get_db, SessionLocal
 from rag.pipeline import retrieve_context
 
@@ -23,6 +23,7 @@ class ChatRequest(BaseModel):
     session_id: int | None = None
     document_id: int | None = None
     document_ids: list[int] | None = None
+    group_ids: list[int] | None = None
 
 
 SYSTEM_PROMPT = (
@@ -48,10 +49,17 @@ SYSTEM_PROMPT = (
     "## Citation Rules\n"
     "- When source context is provided and you rely on it, cite source labels inline like [S1] or [S2].\n"
     "- Do not fabricate citations. Only cite labels that appear in the provided source context.\n"
+    "- Cite only the chunks you actually use. Do not cite a source just because it was retrieved.\n"
     "- Never invent document names, document numbers, paper titles, pages, or summaries that are not in the source context.\n"
     "- If no source context is provided, do not cite, do not mention source cards, and do not claim that uploaded notes said anything.\n\n"
+    "## Grounding Behavior\n"
+    "- If the retrieved context is weak or partial, say so briefly and separate uploaded-note evidence from general explanation.\n"
+    "- For comparisons, synthesize across sources and point out contradictions or gaps when the sources disagree.\n"
+    "- For flashcards, MCQs, revision, or summaries, prioritize the active workspace and retrieved notes over generic facts.\n\n"
     "## Active Retrieval Scope\n"
     "{retrieval_scope}\n\n"
+    "## Active Workspace Memory\n"
+    "{workspace_memory}\n\n"
     "## Source Context\n"
     "{context}\n\n"
     "## Retrieval Confidence\n"
@@ -76,6 +84,9 @@ DOC_REQUEST_RE = re.compile(
 )
 SUMMARY_RE = re.compile(r"\b(summarize|summary|recap|outline|key points|main ideas|revise|revision)\b", re.I)
 COMPARISON_RE = re.compile(r"\b(compare|contrast|difference|differences|versus| vs )\b", re.I)
+FLASHCARD_RE = re.compile(r"\b(flashcards?|anki|revise|revision)\b", re.I)
+MCQ_RE = re.compile(r"\b(mcq|multiple choice|quiz|practice questions?)\b", re.I)
+MENTION_RE = re.compile(r"@([a-zA-Z0-9][a-zA-Z0-9_.-]*)")
 
 
 def _build_chat_history(db: Session, session_id: int) -> list:
@@ -120,6 +131,8 @@ def _format_context(sources: list[dict]) -> tuple[str, str]:
             location_bits.append(f"page {source['page_number']}")
         if source.get("section_heading"):
             location_bits.append(f"section: {source['section_heading']}")
+        if source.get("topic"):
+            location_bits.append(f"topic: {source['topic']}")
         if source.get("filename"):
             location_bits.insert(0, f"file: {source['filename']}")
         location = f" ({', '.join(location_bits)})" if location_bits else ""
@@ -148,6 +161,9 @@ def _source_payload(sources: list[dict]) -> list[dict]:
             "confidence": s.get("confidence"),
             "relevance": s.get("relevance"),
             "snippet": s.get("snippet"),
+            "topic": s.get("topic"),
+            "chunk_type": s.get("chunk_type"),
+            "document_type": s.get("document_type"),
         }
         for s in sources
     ]
@@ -159,6 +175,10 @@ def _classify_query(message: str, has_explicit_documents: bool) -> str:
         return "greeting"
     if CASUAL_RE.match(normalized):
         return "conversational"
+    if MCQ_RE.search(normalized):
+        return "mcq-generation"
+    if FLASHCARD_RE.search(normalized):
+        return "flashcard-generation"
     if "@" in normalized or has_explicit_documents:
         if COMPARISON_RE.search(normalized):
             return "comparison"
@@ -180,14 +200,76 @@ def _retrieval_forbidden(intent: str) -> bool:
     return intent in {"greeting", "conversational"}
 
 
+def _retrieval_depth(intent: str, scope_type: str, document_count: int) -> tuple[int, float]:
+    if intent in {"comparison", "document-summary", "flashcard-generation", "mcq-generation"}:
+        return min(10, max(6, document_count * 3)), EXPLICIT_RETRIEVAL_MIN_CONFIDENCE
+    if scope_type in {"explicit", "workspace", "session"}:
+        return 6, EXPLICIT_RETRIEVAL_MIN_CONFIDENCE
+    if intent in {"retrieval-required", "workspace-specific", "citation-required"}:
+        return 6, RETRIEVAL_MIN_CONFIDENCE
+    return 4, RETRIEVAL_MIN_CONFIDENCE
+
+
+def _build_retrieval_plan(
+    *,
+    intent: str,
+    scope_type: str,
+    documents: list[Document],
+    groups: list[DocumentGroup],
+    retrieval_used: bool,
+    sources: list[dict],
+) -> dict:
+    if _retrieval_forbidden(intent):
+        strategy = "conversation_only"
+        reason = "Small-talk turn; document retrieval skipped."
+    elif documents and retrieval_used:
+        strategy = "multi_stage_hybrid"
+        reason = "Scoped semantic + keyword retrieval, reranking, and compression."
+    elif documents:
+        strategy = "scoped_fallback"
+        reason = "Documents were scoped, but retrieved evidence was weak."
+    else:
+        strategy = "general_knowledge"
+        reason = "No user-owned indexed documents were available for this turn."
+
+    confidence = round(sum(source.get("confidence", 0) for source in sources) / len(sources), 3) if sources else 0
+    return {
+        "intent": intent,
+        "scope": scope_type,
+        "strategy": strategy,
+        "reason": reason,
+        "document_count": len(documents),
+        "workspace_count": len(groups),
+        "retrieved_count": len(sources),
+        "confidence": confidence,
+        "documents": [{"id": document.id, "filename": document.filename} for document in documents[:8]],
+        "workspaces": [{"id": group.id, "slug": group.slug, "name": group.name} for group in groups[:6]],
+    }
+
+
 def _candidate_documents(
     db: Session,
     user_id: int,
     requested_documents: list[Document],
+    requested_groups: list[DocumentGroup],
     session: ChatSession,
 ) -> tuple[list[Document], str]:
-    if requested_documents:
-        return requested_documents, "explicit"
+    if requested_documents or requested_groups:
+        documents_by_id = {document.id: document for document in requested_documents}
+        for group in requested_groups:
+            for document in group.documents:
+                documents_by_id[document.id] = document
+        return list(documents_by_id.values()), "explicit"
+
+    session_group_ids = _session_group_ids(session)
+    if session_group_ids:
+        groups = _validate_groups(db, user_id, session_group_ids)
+        documents_by_id = {}
+        for group in groups:
+            for document in group.documents:
+                documents_by_id[document.id] = document
+        if documents_by_id:
+            return list(documents_by_id.values()), "workspace"
 
     session_ids = _session_document_ids(session)
     if session_ids:
@@ -232,6 +314,10 @@ def _requested_document_ids(request: ChatRequest) -> list[int]:
     return sorted({int(document_id) for document_id in ids})
 
 
+def _requested_group_ids(request: ChatRequest) -> list[int]:
+    return sorted({int(group_id) for group_id in (request.group_ids or [])})
+
+
 def _validate_documents(db: Session, user_id: int, document_ids: list[int]) -> list[Document]:
     if not document_ids:
         return []
@@ -246,11 +332,61 @@ def _validate_documents(db: Session, user_id: int, document_ids: list[int]) -> l
     return documents
 
 
+def _validate_groups(db: Session, user_id: int, group_ids: list[int]) -> list[DocumentGroup]:
+    if not group_ids:
+        return []
+    groups = (
+        db.query(DocumentGroup)
+        .filter(DocumentGroup.user_id == user_id, DocumentGroup.id.in_(group_ids))
+        .all()
+    )
+    found_ids = {group.id for group in groups}
+    if set(group_ids) - found_ids:
+        raise HTTPException(status_code=404, detail="One or more workspaces were not found")
+    return groups
+
+
+def _slugify_mention(value: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]+", "-", value.strip().lower()).strip("-")
+
+
+def _resolve_tagged_entities(db: Session, user_id: int, message: str) -> tuple[list[Document], list[DocumentGroup]]:
+    mentions = {_slugify_mention(match) for match in MENTION_RE.findall(message)}
+    if not mentions:
+        return [], []
+
+    groups = db.query(DocumentGroup).filter(DocumentGroup.user_id == user_id).all()
+    tagged_groups = [group for group in groups if group.slug in mentions]
+    group_slugs = {group.slug for group in tagged_groups}
+
+    documents = db.query(Document).filter(Document.user_id == user_id).all()
+    tagged_documents = []
+    for document in documents:
+        filename_slug = _slugify_mention(document.filename)
+        stem_slug = _slugify_mention(document.filename.rsplit(".", 1)[0])
+        if filename_slug in mentions or stem_slug in mentions:
+            tagged_documents.append(document)
+
+    unresolved = mentions - group_slugs - {
+        _slugify_mention(document.filename) for document in tagged_documents
+    } - {
+        _slugify_mention(document.filename.rsplit(".", 1)[0]) for document in tagged_documents
+    }
+    if unresolved:
+        print(f"Unresolved workspace/document mentions for user {user_id}: {sorted(unresolved)}")
+
+    return tagged_documents, tagged_groups
+
+
 def _set_session_documents(session: ChatSession, documents: list[Document]):
     session.documents = documents
     ids = [document.id for document in documents]
     session.active_document_ids = json.dumps(ids)
     session.document_id = ids[0] if ids else None
+
+
+def _set_session_groups(session: ChatSession, groups: list[DocumentGroup]):
+    session.active_group_ids = json.dumps([group.id for group in groups])
 
 
 def _session_document_ids(session: ChatSession) -> list[int]:
@@ -260,6 +396,10 @@ def _session_document_ids(session: ChatSession) -> list[int]:
     if session.document_id:
         return [session.document_id]
     return [document.id for document in session.documents]
+
+
+def _session_group_ids(session: ChatSession) -> list[int]:
+    return _parse_document_ids(session.active_group_ids)
 
 
 def _retrieval_scope(documents: list[Document]) -> str:
@@ -275,6 +415,18 @@ def _retrieval_scope(documents: list[Document]) -> str:
     return "\n".join(lines)
 
 
+def _workspace_memory(groups: list[DocumentGroup]) -> str:
+    if not groups:
+        return "No active workspace memory for this turn."
+    parts = []
+    for group in groups:
+        if group.memory.strip():
+            parts.append(f"@{group.slug}: {group.memory.strip()}")
+        if group.retrieval_preferences and group.retrieval_preferences != "{}":
+            parts.append(f"@{group.slug} preferences: {group.retrieval_preferences}")
+    return "\n".join(parts) if parts else "No saved workspace memory for the active workspace."
+
+
 @router.post("/")
 async def chat_with_docs(
     request: ChatRequest,
@@ -288,7 +440,13 @@ async def chat_with_docs(
     # Resolve or create session
     session = None
     requested_ids = _requested_document_ids(request)
+    requested_group_ids = _requested_group_ids(request)
+    mentioned_documents, mentioned_groups = _resolve_tagged_entities(db, current_user.id, request.message)
     requested_documents = _validate_documents(db, current_user.id, requested_ids)
+    requested_groups = _validate_groups(db, current_user.id, requested_group_ids)
+
+    requested_documents = list({document.id: document for document in [*requested_documents, *mentioned_documents]}.values())
+    requested_groups = list({group.id: group for group in [*requested_groups, *mentioned_groups]}.values())
 
     if request.session_id:
         session = (
@@ -308,11 +466,16 @@ async def chat_with_docs(
         )
         if requested_documents:
             _set_session_documents(session, requested_documents)
+        if requested_groups:
+            _set_session_groups(session, requested_groups)
         db.add(session)
         db.commit()
         db.refresh(session)
-    elif requested_ids:
-        _set_session_documents(session, requested_documents)
+    elif requested_documents or requested_groups:
+        if requested_documents:
+            _set_session_documents(session, requested_documents)
+        if requested_groups:
+            _set_session_groups(session, requested_groups)
         db.commit()
         db.refresh(session)
 
@@ -331,11 +494,13 @@ async def chat_with_docs(
 
     # Capture session ID for the generator (avoid referencing db-bound objects in generator)
     session_id = session.id
-    intent = _classify_query(request.message, has_explicit_documents=bool(requested_ids))
+    has_explicit_context = bool(requested_documents or requested_groups)
+    intent = _classify_query(request.message, has_explicit_documents=has_explicit_context)
     candidate_documents, retrieval_scope_type = _candidate_documents(
         db,
         current_user.id,
         requested_documents,
+        requested_groups,
         session,
     )
     candidate_documents = [
@@ -349,25 +514,31 @@ async def chat_with_docs(
         for document in _validate_documents(db, current_user.id, _session_document_ids(session))
         if document.status == "indexed"
     ]
+    active_groups = _validate_groups(db, current_user.id, _session_group_ids(session))
+    active_group_ids = [group.id for group in active_groups]
     retrieval_scope = _retrieval_scope(candidate_documents)
+    workspace_memory = _workspace_memory(requested_groups or active_groups)
 
     sources = []
     if candidate_document_ids and not _retrieval_forbidden(intent):
-        min_confidence = (
-            EXPLICIT_RETRIEVAL_MIN_CONFIDENCE
-            if retrieval_scope_type in {"explicit", "session"}
-            or intent in {"retrieval-required", "document-summary", "comparison", "workspace-specific", "citation-required"}
-            else RETRIEVAL_MIN_CONFIDENCE
-        )
+        top_k, min_confidence = _retrieval_depth(intent, retrieval_scope_type, len(candidate_document_ids))
         sources = retrieve_context(
             request.message,
             user_id=current_user.id,
             document_ids=candidate_document_ids,
-            top_k=5,
+            top_k=top_k,
             min_confidence=min_confidence,
         )
 
     context, confidence_note = _format_context(sources)
+    retrieval_plan = _build_retrieval_plan(
+        intent=intent,
+        scope_type=retrieval_scope_type,
+        documents=candidate_documents,
+        groups=requested_groups or active_groups,
+        retrieval_used=bool(sources),
+        sources=sources,
+    )
 
     llm = ChatGroq(
         temperature=0.25,
@@ -379,6 +550,7 @@ async def chat_with_docs(
         context=context,
         confidence_note=confidence_note,
         retrieval_scope=retrieval_scope,
+        workspace_memory=workspace_memory,
     )
     prompt_messages = [
         SystemMessage(content=system_message),
@@ -390,7 +562,7 @@ async def chat_with_docs(
         full_response = ""
 
         # Send session metadata first
-        yield f"data: {json.dumps({'session_id': session_id, 'type': 'meta', 'sources': [], 'active_document_ids': active_document_ids, 'intent': intent, 'retrieval_used': False})}\n\n"
+        yield f"data: {json.dumps({'session_id': session_id, 'type': 'meta', 'sources': [], 'active_document_ids': active_document_ids, 'active_group_ids': active_group_ids, 'intent': intent, 'retrieval_used': bool(sources), 'retrieval_plan': retrieval_plan})}\n\n"
 
         try:
             async for chunk in llm.astream(prompt_messages):
@@ -410,7 +582,12 @@ async def chat_with_docs(
             if re.search(rf"\[{re.escape(source['label'])}\]", full_response)
         ]
         if used_sources:
-            yield f"data: {json.dumps({'type': 'meta', 'sources': _source_payload(used_sources), 'retrieval_used': True})}\n\n"
+            final_plan = {
+                **retrieval_plan,
+                "retrieved_count": len(used_sources),
+                "confidence": round(sum(source.get("confidence", 0) for source in used_sources) / len(used_sources), 3),
+            }
+            yield f"data: {json.dumps({'type': 'meta', 'sources': _source_payload(used_sources), 'retrieval_used': True, 'retrieval_plan': final_plan})}\n\n"
 
         # Persist assistant response using a NEW db session to avoid lifecycle issues
         try:

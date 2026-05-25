@@ -21,6 +21,7 @@ class ChatSession(Base):
     title = Column(String, default="New Chat")
     document_id = Column(Integer, ForeignKey("documents.id"), nullable=True)
     active_document_ids = Column(Text, default="[]", nullable=False)
+    active_group_ids = Column(Text, default="[]", nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
