@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { BrainCircuit, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import ThemeToggle from '@/components/ThemeToggle';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -59,28 +60,31 @@ export default function LoginPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0B0F19] p-4 relative overflow-hidden">
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-orange-600/10 rounded-full blur-[120px] -z-10" />
+    <div className="learning-shell min-h-screen items-center justify-center p-4">
       
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div className="w-11" />
           <Link href="/" className="flex items-center gap-2">
-            <BrainCircuit className="h-8 w-8 text-orange-500" />
-            <span className="font-bold text-2xl tracking-tight text-white">DronaAI</span>
+            <span className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 shadow-lg shadow-orange-950/30">
+              <BrainCircuit className="h-6 w-6 text-white" />
+            </span>
+            <span className="font-heading text-2xl font-bold tracking-normal text-slate-50">DronaAI</span>
           </Link>
+          <ThemeToggle compact />
         </div>
 
-        <Card className="bg-white/5 border-white/10 backdrop-blur-xl text-white">
+        <Card className="premium-panel text-white">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
+            <CardTitle className="font-heading text-3xl font-bold tracking-normal">Welcome back</CardTitle>
             <CardDescription className="text-slate-400">
-              Enter your email and password to access your account
+              Enter your email and password to access your learning workspace.
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               {error && (
-                <div className="p-3 text-sm bg-red-500/10 border border-red-500/20 text-red-400 rounded-md">
+                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-200">
                   {error}
                 </div>
               )}
@@ -90,7 +94,7 @@ export default function LoginPage() {
                   id="email"
                   type="email"
                   placeholder="name@example.com"
-                  className="bg-white/5 border-white/10 focus-visible:ring-orange-500"
+                  className="smart-input"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -103,7 +107,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type="password"
-                  className="bg-white/5 border-white/10 focus-visible:ring-orange-500"
+                  className="smart-input"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -113,7 +117,7 @@ export default function LoginPage() {
             <CardFooter className="flex flex-col gap-4">
               <Button 
                 type="submit" 
-                className="w-full bg-orange-600 hover:bg-orange-500 text-white" 
+                className="primary-action w-full" 
                 disabled={loading}
               >
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Sign in'}

@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { api } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BrainCircuit, BookOpen, Clock, Activity, Loader2, Library, Plus, Trash2 } from 'lucide-react';
+import { BrainCircuit, BookOpen, Clock, Activity, Loader2, Library, Plus, Trash2, Target, Sparkles } from 'lucide-react';
 import { motion, type Variants } from 'framer-motion';
 import Sidebar from '@/components/Sidebar';
 import UploadDropzone from '@/components/UploadDropzone';
@@ -181,45 +181,72 @@ export default function DashboardPage() {
   }, undefined);
 
   return (
-    <div className="flex h-screen bg-[#0B0F19] overflow-hidden selection:bg-orange-500/30">
+    <div className="learning-shell">
       <Sidebar />
 
       <main className="flex-1 overflow-y-auto">
-        <div className="p-8 lg:p-12 max-w-7xl mx-auto w-full">
+        <div className="page-wrap">
           
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-10 flex items-end justify-between"
+            className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"
           >
             <div>
-              <h1 className="text-4xl font-bold tracking-tight text-slate-100 mb-2">Welcome back</h1>
-              <p className="text-slate-400 text-lg">Manage your study materials and track your AI interactions.</p>
+              <div className="section-kicker mb-3">
+                <Sparkles className="h-4 w-4" />
+                Premium study command center
+              </div>
+              <h1 className="font-heading mb-3 text-4xl font-bold tracking-normal text-slate-50 md:text-5xl">Welcome back</h1>
+              <p className="max-w-2xl text-lg leading-8 text-slate-300">Build your AI study workspace, organize source material, and turn notes into exam-ready learning flows.</p>
             </div>
-            <div className="hidden md:flex items-center gap-2 bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-full border border-emerald-500/20">
+            <div className="success-chip">
               <Activity className="h-4 w-4" />
-              <span className="text-sm font-medium">System Online</span>
+              <span>Learning engine online</span>
             </div>
+          </motion.div>
+
+          <motion.div variants={containerVariants} initial="hidden" animate="show" className="mb-6 grid gap-4 md:grid-cols-3">
+            {[
+              { icon: Target, label: 'Active focus', value: groups.length ? `${groups.length} study spaces` : 'No spaces yet', tone: 'text-cyan-200' },
+              { icon: BrainCircuit, label: 'AI readiness', value: documents?.length ? 'Context ready' : 'Needs notes', tone: 'text-orange-200' },
+              { icon: Clock, label: 'Last update', value: latestDocumentUpdate ? formatTimestamp(latestDocumentUpdate) : 'Start today', tone: 'text-emerald-200' },
+            ].map((item) => {
+              const Icon = item.icon;
+              return (
+                <motion.div key={item.label} variants={itemVariants} className="premium-panel-soft p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-slate-800 ring-1 ring-slate-700">
+                      <Icon className={`h-5 w-5 ${item.tone}`} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{item.label}</div>
+                      <div className="mt-1 font-heading text-lg font-semibold text-slate-50">{item.value}</div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
           </motion.div>
 
           <motion.div 
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"
+            className="grid grid-cols-1 gap-6 md:grid-cols-3 lg:grid-cols-4"
           >
             {/* Stats Card */}
             <motion.div variants={itemVariants} className="col-span-1">
-              <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl h-full hover:bg-[#1E293B] transition-colors duration-300">
+              <Card className="premium-panel h-full transition duration-300 hover:border-orange-400/30">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-slate-400 flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-orange-400" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-400">
+                    <BookOpen className="h-4 w-4 text-orange-300" />
                     Total Documents
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-4xl font-bold text-slate-100">{documents?.length || 0}</div>
-                  <p className="text-xs text-slate-500 mt-2 flex items-center gap-1">
+                  <div className="font-heading text-5xl font-bold text-slate-50">{documents?.length || 0}</div>
+                  <p className="mt-3 flex items-center gap-1 text-xs font-medium text-slate-500">
                     <Clock className="h-3 w-3" /> {latestDocumentUpdate ? formatTimestamp(latestDocumentUpdate) : 'No documents yet'}
                   </p>
                 </CardContent>
@@ -228,10 +255,10 @@ export default function DashboardPage() {
 
             {/* Upload Card */}
             <motion.div variants={itemVariants} className="col-span-1 md:col-span-2 lg:col-span-3">
-              <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl h-full border-t border-t-orange-500/20">
+              <Card className="premium-panel h-full border-t-2 border-t-orange-400/40">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-slate-100">Intelligent Ingestion</CardTitle>
-                  <CardDescription className="text-slate-400">Upload materials to instantly chunk, embed, and index them via our FAISS RAG pipeline.</CardDescription>
+                  <CardTitle className="font-heading text-xl font-semibold text-slate-50">Intelligent Ingestion</CardTitle>
+                  <CardDescription className="text-slate-400">Upload materials to create a searchable learning base for tutoring, revision, flashcards, and citations.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <UploadDropzone 
@@ -245,9 +272,9 @@ export default function DashboardPage() {
 
             {/* Documents List */}
             <motion.div variants={itemVariants} className="col-span-1 md:col-span-3 lg:col-span-4 mt-6">
-              <Card className="mb-6 bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl">
+              <Card className="premium-panel mb-6">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+                  <CardTitle className="font-heading flex items-center gap-2 text-xl font-semibold text-slate-50">
                     <Library className="h-5 w-5 text-emerald-300" />
                     Workspaces
                   </CardTitle>
@@ -261,13 +288,13 @@ export default function DashboardPage() {
                       value={newGroupName}
                       onChange={(event) => setNewGroupName(event.target.value)}
                       placeholder="Create @workspace, e.g. nlp-notes"
-                      className="h-11 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+                      className="smart-input h-11 flex-1"
                     />
                     <button
                       type="button"
                       onClick={() => createGroupMutation.mutate()}
                       disabled={!newGroupName.trim() || createGroupMutation.isPending}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-bold text-white shadow-lg shadow-emerald-950/20 transition hover:-translate-y-0.5 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {createGroupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                       Create Workspace
@@ -288,8 +315,8 @@ export default function DashboardPage() {
                             }
                             className={`rounded-full border px-3 py-1.5 text-xs transition ${
                               selected
-                                ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200'
-                                : 'border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200'
+                                ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-100'
+                                : 'border-slate-700 bg-[#0B1220]/60 text-slate-400 hover:text-slate-100'
                             }`}
                           >
                             {document.filename}
@@ -301,10 +328,10 @@ export default function DashboardPage() {
                   {groups.length > 0 && (
                     <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {groups.map((group) => (
-                        <div key={group.id} className="rounded-xl border border-white/8 bg-white/[0.035] p-4">
+                        <div key={group.id} className="study-card">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <div className="truncate font-semibold text-slate-100">@{group.slug}</div>
+                              <div className="font-heading truncate font-semibold text-slate-50">@{group.slug}</div>
                               <div className="mt-1 text-xs text-slate-500">{group.doc_count} docs</div>
                             </div>
                             <button
@@ -330,22 +357,23 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl flex flex-col min-h-[400px]">
+              <Card className="premium-panel flex min-h-[400px] flex-col">
                 <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-slate-100 flex items-center gap-2">
-                    <BrainCircuit className="h-5 w-5 text-orange-400" />
+                  <CardTitle className="font-heading flex items-center gap-2 text-xl font-semibold text-slate-50">
+                    <BrainCircuit className="h-5 w-5 text-orange-300" />
                     Indexed Materials
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex-1">
                   {isLoadingDocs ? (
                     <div className="flex flex-col items-center justify-center h-40 space-y-4">
-                      <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                      <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
                     </div>
                   ) : documents?.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-40 text-slate-500 border-2 border-dashed border-white/5 rounded-2xl mx-2">
-                      <BookOpen className="h-8 w-8 mb-2 opacity-50" />
-                      <p className="text-sm">No documents found. Upload one to get started.</p>
+                    <div className="mx-2 flex h-48 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-700 bg-[#0B1220]/50 text-center text-slate-500">
+                      <BookOpen className="mb-3 h-9 w-9 text-orange-300/70" />
+                      <p className="font-heading text-lg font-semibold text-slate-200">Start building your AI study workspace</p>
+                      <p className="mt-1 text-sm">Upload notes to generate revision material.</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

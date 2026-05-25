@@ -21,34 +21,34 @@ export default function UploadDropzone({ onDrop, isPending, error }: UploadDropz
 
   return (
     <div className="flex flex-col gap-4">
-      <div 
+      <div
         {...getRootProps()} 
-        className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-300 ${
+        className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300 sm:p-12 ${
           isDragActive 
-            ? 'border-orange-500 bg-orange-500/10 shadow-[0_0_30px_rgba(249,115,22,0.15)]' 
-            : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]'
+            ? 'border-orange-400 bg-orange-500/10 shadow-[0_0_34px_rgba(249,115,22,0.18)]' 
+            : 'border-slate-600 bg-[#0B1220]/55 hover:border-orange-400/35 hover:bg-[#0B1220]/80'
         }`}
       >
         <input {...getInputProps()} />
         {isPending ? (
           <div className="flex flex-col items-center animate-in fade-in">
-            <Loader2 className="h-10 w-10 text-orange-500 animate-spin mb-4" />
-            <p className="text-sm text-slate-400 font-medium">Processing document securely...</p>
+            <Loader2 className="mb-4 h-10 w-10 animate-spin text-orange-400" />
+            <p className="text-sm font-semibold text-slate-300">Building your study index...</p>
           </div>
         ) : (
           <div className="flex flex-col items-center">
-            <div className={`p-4 rounded-full mb-4 transition-colors ${isDragActive ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800/50 text-slate-400'}`}>
+            <div className={`mb-4 rounded-2xl p-4 transition-colors ${isDragActive ? 'bg-orange-500/20 text-orange-300' : 'bg-slate-800 text-cyan-200'}`}>
               <UploadCloud className="h-8 w-8" />
             </div>
-            <p className="text-base font-medium text-slate-200">
-              {isDragActive ? "Drop file to securely upload" : "Click to upload or drag and drop"}
+            <p className="font-heading text-lg font-semibold text-slate-50">
+              {isDragActive ? "Drop to create study material" : "Upload notes, lectures, or PDFs"}
             </p>
-            <p className="text-sm text-slate-500 mt-2">Supports PDF and TXT (Max 10MB)</p>
+            <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">DronaAI will parse, chunk, and prepare them for chat, revision, flashcards, and exam practice.</p>
           </div>
         )}
       </div>
       {error && (
-        <div className="px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center justify-center animate-in fade-in slide-in-from-top-2">
+        <div className="animate-in fade-in slide-in-from-top-2 flex items-center justify-center rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           {error}
         </div>
       )}

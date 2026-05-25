@@ -14,14 +14,14 @@ interface DocumentCardProps {
 
 export default function DocumentCard({ id, filename, createdAt, isDeleting, onDelete }: DocumentCardProps) {
   return (
-    <div className="group relative overflow-hidden rounded-xl bg-[#1E293B]/40 hover:bg-[#1E293B]/80 border border-white/5 hover:border-white/10 transition-all duration-300 p-4 flex items-center justify-between">
+    <div className="group relative flex items-center justify-between overflow-hidden rounded-2xl border border-slate-700/70 bg-[#111827] p-4 shadow-lg shadow-black/10 transition-all duration-300 hover:-translate-y-0.5 hover:border-orange-400/30 hover:bg-[#172033]">
       <div className="flex items-center gap-4 overflow-hidden">
-        <div className="h-10 w-10 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-          <FileText className="h-5 w-5 text-orange-400" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-500/10 ring-1 ring-orange-400/25">
+          <FileText className="h-5 w-5 text-orange-300" />
         </div>
         <div className="flex flex-col overflow-hidden">
-          <span className="font-medium text-slate-200 truncate pr-4">{filename}</span>
-          <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
+          <span className="truncate pr-4 font-semibold text-slate-100">{filename}</span>
+          <div className="mt-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
             <Calendar className="h-3 w-3" />
             {formatTimestamp(createdAt)}
           </div>
@@ -31,7 +31,7 @@ export default function DocumentCard({ id, filename, createdAt, isDeleting, onDe
       <Button 
         variant="ghost" 
         size="icon" 
-        className="h-8 w-8 text-slate-500 hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-opacity absolute right-4"
+        className="absolute right-4 h-8 w-8 text-slate-500 opacity-0 transition-opacity hover:bg-red-400/10 hover:text-red-300 group-hover:opacity-100"
         onClick={() => onDelete(id)}
         disabled={isDeleting}
       >

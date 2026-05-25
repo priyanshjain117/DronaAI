@@ -23,6 +23,7 @@ import { useStore } from '@/store/useStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { formatTimestamp } from '@/lib/formatDate';
+import ThemeToggle from '@/components/ThemeToggle';
 
 interface ChatSessionItem {
   id: number;
@@ -163,15 +164,20 @@ function SidebarInner() {
       <div className="p-4">
         <div className="mb-5 flex items-center justify-between gap-2">
           <Link className="flex min-w-0 items-center gap-2" href="/dashboard" onClick={() => setMobileOpen(false)}>
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-orange-500/10 ring-1 ring-orange-500/20">
-              <BrainCircuit className="h-5 w-5 text-orange-400" />
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 shadow-lg shadow-orange-950/35">
+              <BrainCircuit className="h-5 w-5 text-white" />
             </div>
-            {!collapsed && <span className="truncate text-lg font-bold tracking-tight text-slate-100">DronaAI</span>}
+            {!collapsed && (
+              <div className="min-w-0">
+                <span className="font-heading block truncate text-lg font-bold tracking-normal text-slate-50">DronaAI</span>
+                <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Learning OS</span>
+              </div>
+            )}
           </Link>
           <button
             type="button"
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden rounded-lg p-2 text-slate-500 transition hover:bg-white/5 hover:text-slate-200 md:grid"
+            className="hidden rounded-lg p-2 text-slate-500 transition hover:bg-slate-800 hover:text-slate-200 md:grid"
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
             {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
@@ -180,7 +186,7 @@ function SidebarInner() {
 
         <button
           onClick={handleNewChat}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 px-3 py-3 font-semibold text-white shadow-lg shadow-orange-500/15 transition hover:brightness-110 active:scale-[0.98] ${
+          className={`primary-action w-full py-3 ${
             collapsed ? 'px-0' : ''
           }`}
         >
@@ -197,7 +203,7 @@ function SidebarInner() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search chats and notes"
-              className="h-10 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-9 pr-3 text-sm text-slate-200 outline-none transition placeholder:text-slate-500 focus:border-orange-500/40 focus:ring-2 focus:ring-orange-500/10"
+              className="smart-input h-10 w-full pl-9 pr-3"
             />
           </div>
         )}
@@ -208,8 +214,8 @@ function SidebarInner() {
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
               pathname === '/dashboard'
-                ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/20'
-                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                ? 'bg-orange-500/10 text-orange-700 ring-1 ring-orange-400/25 shadow-sm shadow-orange-950/25 dark:text-orange-200'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
             } ${collapsed ? 'justify-center px-0' : ''}`}
           >
             <LayoutDashboard className="h-5 w-5 shrink-0" />
@@ -221,8 +227,8 @@ function SidebarInner() {
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
               pathname === '/chat' && !activeSessionId
-                ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/20'
-                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                ? 'bg-orange-500/10 text-orange-700 ring-1 ring-orange-400/25 shadow-sm shadow-orange-950/25 dark:text-orange-200'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
             } ${collapsed ? 'justify-center px-0' : ''}`}
           >
             <MessageSquare className="h-5 w-5 shrink-0" />
@@ -234,8 +240,8 @@ function SidebarInner() {
             onClick={() => setMobileOpen(false)}
             className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
               pathname === '/study'
-                ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/20'
-                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                ? 'bg-orange-500/10 text-orange-700 ring-1 ring-orange-400/25 shadow-sm shadow-orange-950/25 dark:text-orange-200'
+                : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
             } ${collapsed ? 'justify-center px-0' : ''}`}
           >
             <GraduationCap className="h-5 w-5 shrink-0" />
@@ -245,7 +251,7 @@ function SidebarInner() {
 
         {!collapsed && filteredGroups.length > 0 && (
           <div className="mt-6">
-            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Workspaces</div>
+            <div className="mb-2 px-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Study Spaces</div>
             <div className="space-y-1">
               {filteredGroups.map((group) => (
                 <Link
@@ -258,7 +264,7 @@ function SidebarInner() {
                     const documentId = Number(event.dataTransfer.getData('application/drona-document-id'));
                     if (documentId) attachDocumentToGroupMutation.mutate({ groupId: group.id, documentId });
                   }}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
                 >
                   <Library className="h-4 w-4 shrink-0 text-emerald-300" />
                   <span className="min-w-0 flex-1 truncate">@{group.slug}</span>
@@ -271,7 +277,7 @@ function SidebarInner() {
 
         {!collapsed && filteredDocuments.length > 0 && (
           <div className="mt-6">
-            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Uploaded Notes</div>
+            <div className="mb-2 px-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Knowledge Base</div>
             <div className="space-y-1">
               {filteredDocuments.map((document) => (
                 <Link
@@ -283,7 +289,7 @@ function SidebarInner() {
                     event.dataTransfer.setData('application/drona-document-id', String(document.id));
                     event.dataTransfer.effectAllowed = 'copy';
                   }}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition hover:bg-slate-800 hover:text-slate-100"
                 >
                   <FileText className="h-4 w-4 shrink-0 text-orange-400" />
                   <span className="truncate">{document.filename}</span>
@@ -295,7 +301,7 @@ function SidebarInner() {
 
         {!collapsed && (
           <div className="mt-6">
-            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Recent Chats</div>
+            <div className="mb-2 px-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Recent Tutoring</div>
             <div className="space-y-1">
               {filteredSessions.slice(0, 24).map((session) => (
                 <div key={session.id} className="group relative">
@@ -304,8 +310,8 @@ function SidebarInner() {
                     onClick={() => setMobileOpen(false)}
                     className={`block rounded-xl px-3 py-2.5 pr-10 transition ${
                       activeSessionId === String(session.id)
-                        ? 'bg-orange-500/10 text-orange-200 ring-1 ring-orange-500/20'
-                        : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+                        ? 'bg-orange-500/10 text-orange-800 ring-1 ring-orange-400/25 dark:text-orange-100'
+                        : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                     }`}
                   >
                     <div className="truncate text-sm font-medium">{session.title}</div>
@@ -340,7 +346,7 @@ function SidebarInner() {
                 </div>
               ))}
               {filteredSessions.length === 0 && (
-                <div className="rounded-xl border border-white/5 bg-white/[0.03] p-3 text-sm text-slate-500">
+                <div className="rounded-xl border border-slate-700 bg-[#111827] p-3 text-sm text-slate-500">
                   No matching chats yet.
                 </div>
               )}
@@ -349,10 +355,13 @@ function SidebarInner() {
         )}
       </nav>
 
-      <div className="border-t border-white/5 p-3">
+      <div className="border-t border-slate-800 p-3">
+        <div className={`mb-2 ${collapsed ? 'flex justify-center' : ''}`}>
+          <ThemeToggle compact={collapsed} />
+        </div>
         <button
           onClick={handleLogout}
-          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition hover:bg-red-500/10 hover:text-red-400 ${
+          className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-slate-400 transition hover:bg-red-500/10 hover:text-red-300 ${
             collapsed ? 'justify-center px-0' : ''
           }`}
         >
@@ -367,7 +376,7 @@ function SidebarInner() {
     <>
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed left-4 top-4 z-50 rounded-xl border border-white/10 bg-[#111827]/90 p-2 text-slate-300 shadow-xl backdrop-blur transition hover:text-white md:hidden"
+        className="fixed left-4 top-4 z-50 rounded-xl border border-slate-700 bg-[#111827] p-2 text-slate-300 shadow-xl transition hover:text-white md:hidden"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
@@ -376,7 +385,7 @@ function SidebarInner() {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="relative flex h-dvh w-[min(86vw,320px)] flex-col border-r border-white/10 bg-[#0B0F19] shadow-2xl animate-in slide-in-from-left duration-300">
+          <aside className="animate-in slide-in-from-left relative flex h-dvh w-[min(86vw,320px)] flex-col border-r border-slate-800 bg-[#0B1220] shadow-2xl duration-300">
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute right-4 top-4 rounded-lg p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
@@ -390,7 +399,7 @@ function SidebarInner() {
       )}
 
       <aside
-        className={`hidden h-screen shrink-0 flex-col border-r border-white/8 bg-[#0B0F19]/92 shadow-2xl shadow-black/20 backdrop-blur-xl transition-[width] duration-300 md:flex ${
+        className={`hidden h-screen shrink-0 flex-col border-r border-slate-800 bg-[#0B1220] shadow-2xl shadow-black/20 transition-[width] duration-300 md:flex ${
           collapsed ? 'w-[76px]' : 'w-[286px]'
         }`}
       >

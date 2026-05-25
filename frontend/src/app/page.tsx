@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Bot, FileText, Sparkles, BrainCircuit, ArrowRight, Zap, CheckCircle2 } from 'lucide-react';
 import { motion, Variants } from 'framer-motion';
+import ThemeToggle from '@/components/ThemeToggle';
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 20 },
@@ -20,64 +21,62 @@ const stagger: Variants = {
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#0B0F19] selection:bg-orange-500/30 selection:text-orange-200">
+    <div className="flex min-h-screen flex-col bg-[#0B1220] text-slate-50 selection:bg-orange-500/30 selection:text-orange-100">
       {/* Navigation */}
-      <header className="px-6 lg:px-12 h-20 flex items-center border-b border-white/5 backdrop-blur-xl bg-[#0B0F19]/80 sticky top-0 z-50">
+      <header className="sticky top-0 z-50 flex h-20 items-center border-b border-slate-800 bg-[#0B1220]/95 px-6 lg:px-12">
         <Link className="flex items-center justify-center gap-2 group" href="/">
-          <div className="p-2 bg-orange-500/10 rounded-xl group-hover:bg-orange-500/20 transition-colors">
-            <BrainCircuit className="h-6 w-6 text-orange-500" />
+          <div className="rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 p-2 shadow-lg shadow-orange-950/30 transition-transform group-hover:-translate-y-0.5">
+            <BrainCircuit className="h-6 w-6 text-white" />
           </div>
-          <span className="font-bold text-xl tracking-tight text-slate-100">DronaAI</span>
+          <span className="font-heading text-xl font-bold tracking-normal text-slate-100">DronaAI</span>
         </Link>
-        <nav className="ml-auto flex gap-6 items-center">
+        <nav className="ml-auto flex items-center gap-4 sm:gap-6">
+          <ThemeToggle compact />
           <Link className="text-sm font-medium text-slate-400 hover:text-slate-100 transition-colors" href="/login">
             Sign in
           </Link>
           <Link href="/signup">
-            <Button className="bg-orange-600 hover:bg-orange-500 text-white rounded-full px-6 shadow-[0_0_15px_rgba(249,115,22,0.2)] transition-all hover:shadow-[0_0_25px_rgba(249,115,22,0.4)]">
+            <Button className="primary-action rounded-full px-6">
               Get Started
             </Button>
           </Link>
         </nav>
       </header>
 
-      <main className="flex-1 flex flex-col items-center relative overflow-hidden">
-        {/* Subtle Background Glow */}
-        <div className="absolute top-[-10%] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-orange-600/8 rounded-full blur-[120px] pointer-events-none" />
-
+      <main className="relative flex flex-1 flex-col items-center overflow-hidden bg-[linear-gradient(120deg,rgba(249,115,22,0.12),transparent_32rem),radial-gradient(circle_at_88%_8%,rgba(34,211,238,0.12),transparent_28rem)]">
         {/* Hero Section */}
-        <section className="w-full pt-32 pb-24 md:pt-40 md:pb-32 flex justify-center text-center px-4 relative z-10">
+        <section className="relative z-10 flex w-full justify-center px-4 pb-20 pt-28 text-center md:pb-28 md:pt-36">
           <motion.div
             initial="hidden"
             animate="show"
             variants={stagger}
             className="max-w-4xl space-y-8 flex flex-col items-center"
           >
-            <motion.div variants={fadeUp} className="inline-flex items-center rounded-full border border-orange-500/20 bg-orange-500/10 px-4 py-1.5 text-sm font-medium text-orange-400 backdrop-blur-md">
+            <motion.div variants={fadeUp} className="concept-chip">
               <Sparkles className="mr-2 h-4 w-4" />
               Next-Generation Study Intelligence
             </motion.div>
 
-            <motion.h1 variants={fadeUp} className="text-5xl md:text-7xl font-bold tracking-tight text-slate-50 leading-[1.1]">
-              Your AI-Powered <br className="hidden md:block" />
+            <motion.h1 variants={fadeUp} className="font-heading text-5xl font-bold leading-[1.08] tracking-normal text-slate-50 md:text-7xl">
+              The AI Learning OS <br className="hidden md:block" />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-400">
-                Study Companion
+                for Serious Students
               </span>
             </motion.h1>
 
-            <motion.p variants={fadeUp} className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Upload your notes, textbooks, and study materials. Chat with them instantly, generate summaries, and simplify exam preparation using advanced AI.
+            <motion.p variants={fadeUp} className="mx-auto max-w-2xl text-lg leading-8 text-slate-300 md:text-xl">
+              Upload your notes, chat with them, generate revision plans, and turn raw study material into an elite exam-prep workspace.
             </motion.p>
 
             <motion.div variants={fadeUp} className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8 w-full sm:w-auto">
               <Link href="/signup" className="w-full sm:w-auto">
-                <Button size="lg" className="h-14 px-8 bg-orange-600 hover:bg-orange-500 text-white rounded-full text-base font-medium w-full shadow-[0_0_20px_rgba(249,115,22,0.3)] transition-all hover:scale-105">
+                <Button size="lg" className="primary-action h-14 w-full rounded-full px-8 text-base">
                   Start Studying for Free
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </Link>
               <Link href="/login" className="w-full sm:w-auto">
-                <Button size="lg" variant="outline" className="h-14 px-8 rounded-full text-base font-medium w-full border-white/10 hover:bg-white/5 text-slate-300">
+                <Button size="lg" variant="outline" className="h-14 w-full rounded-full border-slate-700 bg-slate-900 px-8 text-base font-semibold text-slate-300 hover:bg-slate-800">
                   View Live Demo
                 </Button>
               </Link>
@@ -86,11 +85,11 @@ export default function Home() {
         </section>
 
         {/* Workflow Section */}
-        <section className="w-full py-24 bg-[#111827]/50 border-y border-white/5 flex justify-center relative z-10">
+        <section className="relative z-10 flex w-full justify-center border-y border-slate-800 bg-[#111827] py-24">
           <div className="max-w-6xl px-6 w-full">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-slate-100 mb-4">How DronaAI Works</h2>
-              <p className="text-slate-400 max-w-xl mx-auto">A seamless, intelligent pipeline from upload to understanding.</p>
+              <h2 className="font-heading mb-4 text-3xl font-bold text-slate-100">How DronaAI Works</h2>
+              <p className="mx-auto max-w-xl text-slate-400">A seamless, intelligent pipeline from source material to understanding.</p>
             </div>
 
             <motion.div
@@ -120,7 +119,7 @@ export default function Home() {
                 <motion.div
                   key={i}
                   variants={fadeUp}
-                  className="flex flex-col space-y-4 p-8 rounded-3xl bg-[#1E293B]/50 border border-white/5 backdrop-blur-xl hover:bg-[#1E293B] transition-colors"
+                  className="study-card flex flex-col space-y-4 p-8"
                 >
                   <div className="h-12 w-12 bg-orange-500/10 rounded-2xl flex items-center justify-center mb-2">
                     <step.icon className="h-6 w-6 text-orange-400" />
@@ -134,9 +133,9 @@ export default function Home() {
         </section>
 
         {/* Benefits Section */}
-        <section className="w-full py-32 flex justify-center relative z-10">
+        <section className="relative z-10 flex w-full justify-center py-28">
           <div className="max-w-4xl px-6 w-full text-center">
-            <h2 className="text-3xl md:text-4xl font-bold text-slate-100 mb-12">Designed for Deep Focus</h2>
+            <h2 className="font-heading mb-12 text-3xl font-bold text-slate-100 md:text-4xl">Designed for Deep Focus</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-left">
               {[
                 "Distraction-free minimal interface",
@@ -146,7 +145,7 @@ export default function Home() {
                 "Secure, private document storage",
                 "Highly accurate RAG citations"
               ].map((benefit, i) => (
-                <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-[#111827] border border-white/5">
+                <div key={i} className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-[#111827] p-4">
                   <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
                   <span className="text-slate-300 font-medium">{benefit}</span>
                 </div>
@@ -156,7 +155,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="py-8 w-full border-t border-white/5 flex items-center justify-center bg-[#0B0F19]">
+      <footer className="flex w-full items-center justify-center border-t border-slate-800 bg-[#0B1220] py-8">
         <p className="text-sm text-slate-500">
           © {new Date().getFullYear()} DronaAI. Premium AI Study Platform.
         </p>

@@ -292,20 +292,20 @@ export default function StudyPage() {
   if (!mounted || !token) return null;
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#0B0F19] text-slate-100 selection:bg-orange-500/30">
+    <div className="learning-shell">
       <Sidebar />
 
       <main className="flex min-w-0 flex-1 overflow-y-auto">
-        <div className="mx-auto grid w-full max-w-7xl gap-6 px-4 py-6 md:grid-cols-[360px_1fr] md:px-8 lg:px-10">
+        <div className="page-wrap grid gap-6 md:grid-cols-[360px_1fr]">
           <aside className="space-y-4">
-            <section className="rounded-xl border border-white/8 bg-[#111827]/85 p-4 shadow-xl shadow-black/20">
+            <section className="premium-panel p-4">
               <div className="mb-4 flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-orange-500/10 ring-1 ring-orange-500/20">
-                  <GraduationCap className="h-5 w-5 text-orange-300" />
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-400 shadow-lg shadow-orange-950/25">
+                  <GraduationCap className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-lg font-semibold">Study Tools</h1>
-                  <p className="text-xs text-slate-500">Generate grounded exam prep material.</p>
+                  <h1 className="font-heading text-xl font-bold">Study Tools</h1>
+                  <p className="text-xs font-medium text-slate-500">Generate grounded exam prep material.</p>
                 </div>
               </div>
 
@@ -322,8 +322,8 @@ export default function StudyPage() {
                       }}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition ${
                         tool === option.id
-                          ? 'border-orange-400/40 bg-orange-500/15 text-orange-100'
-                          : 'border-white/8 bg-white/[0.03] text-slate-400 hover:text-slate-100'
+                          ? 'border-orange-400/40 bg-orange-500/15 text-orange-800 shadow-sm shadow-orange-950/25 dark:text-orange-100'
+                          : 'border-slate-700 bg-[#0B1220]/60 text-slate-400 hover:border-slate-600 hover:text-slate-100'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -338,7 +338,7 @@ export default function StudyPage() {
                 <select
                   value={mode}
                   onChange={(event) => setMode(event.target.value)}
-                  className="h-10 rounded-lg border border-white/10 bg-[#0B0F19] px-3 text-sm text-slate-200 outline-none focus:border-orange-400/50"
+                  className="smart-input h-10"
                 >
                   {modeOptions[tool].map((option) => (
                     <option key={option.value} value={option.value}>
@@ -354,7 +354,7 @@ export default function StudyPage() {
                       <select
                         value={difficulty}
                         onChange={(event) => setDifficulty(event.target.value)}
-                        className="h-10 w-full rounded-lg border border-white/10 bg-[#0B0F19] px-3 text-sm text-slate-200 outline-none focus:border-orange-400/50"
+                        className="smart-input h-10 w-full"
                       >
                         <option value="easy">Easy</option>
                         <option value="medium">Medium</option>
@@ -369,7 +369,7 @@ export default function StudyPage() {
                         max={40}
                         value={count}
                         onChange={(event) => setCount(Number(event.target.value))}
-                        className="h-10 w-full rounded-lg border border-white/10 bg-[#0B0F19] px-3 text-sm text-slate-200 outline-none focus:border-orange-400/50"
+                        className="smart-input h-10 w-full"
                       />
                     </div>
                   </div>
@@ -381,12 +381,12 @@ export default function StudyPage() {
                   onChange={(event) => setQuery(event.target.value)}
                   rows={3}
                   placeholder="Optional topic, chapter, or exam focus"
-                  className="resize-none rounded-lg border border-white/10 bg-[#0B0F19] px-3 py-2 text-sm text-slate-200 outline-none placeholder:text-slate-600 focus:border-orange-400/50"
+                  className="smart-input resize-none py-2"
                 />
               </div>
             </section>
 
-            <section className="rounded-xl border border-white/8 bg-[#111827]/85 p-4 shadow-xl shadow-black/20">
+            <section className="premium-panel p-4">
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
                 <Library className="h-4 w-4 text-emerald-300" />
                 Workspaces
@@ -402,7 +402,7 @@ export default function StudyPage() {
                     className={`rounded-full border px-3 py-1.5 text-xs transition ${
                       selectedGroupIds.includes(group.id)
                         ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-100'
-                        : 'border-white/8 bg-white/[0.03] text-slate-400'
+                        : 'border-slate-700 bg-[#0B1220]/60 text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     @{group.slug} · {group.doc_count || 0}
@@ -414,9 +414,9 @@ export default function StudyPage() {
                 Documents
               </div>
               <div className="max-h-48 space-y-2 overflow-y-auto">
-                {isLoadingDocuments && <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-xs text-slate-500">Loading documents...</div>}
+                {isLoadingDocuments && <div className="surface-inset px-3 py-2 text-xs text-slate-500">Loading documents...</div>}
                 {!isLoadingDocuments && documents.length === 0 && (
-                  <div className="rounded-lg border border-white/8 bg-white/[0.03] px-3 py-3 text-xs leading-5 text-slate-500">
+                  <div className="surface-inset px-3 py-3 text-xs leading-5 text-slate-500">
                     No indexed notes loaded for this session. Upload or reindex notes from the dashboard.
                   </div>
                 )}
@@ -427,8 +427,8 @@ export default function StudyPage() {
                     onClick={() => toggleDocument(document.id)}
                     className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition ${
                       selectedDocumentIds.includes(document.id)
-                        ? 'border-orange-400/40 bg-orange-500/15 text-orange-100'
-                        : 'border-white/8 bg-white/[0.03] text-slate-400 hover:text-slate-100'
+                        ? 'border-orange-400/40 bg-orange-500/15 text-orange-800 dark:text-orange-100'
+                        : 'border-slate-700 bg-[#0B1220]/60 text-slate-400 hover:text-slate-100'
                     }`}
                   >
                     <FileText className="h-3.5 w-3.5 shrink-0" />
@@ -447,7 +447,7 @@ export default function StudyPage() {
               <Button
                 onClick={() => generateMutation.mutate()}
                 disabled={generateMutation.isPending || !hasStudyContext}
-                className="mt-4 h-11 w-full rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 font-semibold text-white shadow-lg shadow-orange-500/20"
+                className="primary-action mt-4 h-11 w-full"
               >
                 {generateMutation.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
                 {hasStudyContext ? 'Generate' : 'Select a note first'}
@@ -464,8 +464,8 @@ export default function StudyPage() {
               )}
             </section>
 
-            <section className="rounded-xl border border-white/8 bg-[#111827]/85 p-3">
-              <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Saved Materials</div>
+            <section className="premium-panel p-3">
+              <div className="mb-2 px-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Saved Materials</div>
               <div className="max-h-72 space-y-2 overflow-y-auto">
                 {materials.map((material) => (
                   <button
@@ -481,7 +481,7 @@ export default function StudyPage() {
                     className={`w-full rounded-lg border px-3 py-2 text-left transition ${
                       activeMaterialId === material.id
                         ? 'border-orange-400/40 bg-orange-500/10'
-                        : 'border-white/8 bg-white/[0.03] hover:bg-white/[0.05]'
+                        : 'border-slate-700 bg-[#0B1220]/60 hover:bg-slate-800'
                     }`}
                   >
                     <div className="truncate text-sm font-medium text-slate-200">{material.title}</div>
@@ -496,14 +496,14 @@ export default function StudyPage() {
             </section>
           </aside>
 
-          <section className="min-w-0 rounded-xl border border-white/8 bg-[#111827]/70 shadow-2xl shadow-black/20">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-5 py-4">
+          <section className="premium-panel min-w-0">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-5 py-4">
               <div className="min-w-0">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-orange-300">
+                <div className="section-kicker">
                   <BrainCircuit className="h-3.5 w-3.5" />
                   Revision Workspace
                 </div>
-                <h2 className="mt-1 truncate text-xl font-semibold text-slate-50">
+                <h2 className="font-heading mt-1 truncate text-2xl font-bold text-slate-50">
                   {activeMaterial?.title || 'Generate your first study material'}
                 </h2>
                 {(activeDocs.length > 0 || activeGroups.length > 0) && (
@@ -516,7 +516,7 @@ export default function StudyPage() {
                 <button
                   type="button"
                   onClick={exportMaterial}
-                  className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-slate-300 transition hover:text-white"
+                  className="secondary-action h-9 px-3"
                 >
                   <Download className="h-4 w-4" />
                   Export
@@ -528,10 +528,10 @@ export default function StudyPage() {
               {!activeMaterial ? (
                 <div className="grid min-h-[58vh] place-items-center text-center">
                   <div>
-                    <div className="mx-auto grid h-16 w-16 place-items-center rounded-xl border border-orange-500/20 bg-orange-500/10">
-                      <GraduationCap className="h-8 w-8 text-orange-300" />
+                    <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 shadow-2xl shadow-orange-950/25">
+                      <GraduationCap className="h-8 w-8 text-white" />
                     </div>
-                    <h3 className="mt-5 text-2xl font-semibold">Build exam-ready material</h3>
+                    <h3 className="font-heading mt-5 text-3xl font-bold">Build exam-ready material</h3>
                     <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-400">
                       Select notes or workspaces, choose a study workflow, and DronaAI will generate grounded material from your uploaded context.
                     </p>
@@ -582,11 +582,11 @@ function SummaryView({ material }: { material: StudyMaterial }) {
   const content = material.content || {};
   return (
     <div className="grid gap-5 lg:grid-cols-[220px_1fr]">
-      <nav className="hidden rounded-lg border border-white/8 bg-white/[0.03] p-3 lg:block">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Topics</div>
+      <nav className="surface-inset hidden p-3 lg:block">
+        <div className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Topics</div>
         <div className="space-y-1">
           {(content.sections || []).map((section, index) => (
-            <a key={index} href={`#section-${index}`} className="block truncate rounded-md px-2 py-1.5 text-sm text-slate-400 hover:bg-white/[0.04] hover:text-slate-100">
+            <a key={index} href={`#section-${index}`} className="block truncate rounded-md px-2 py-1.5 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-100">
               {section.heading}
             </a>
           ))}
@@ -594,19 +594,19 @@ function SummaryView({ material }: { material: StudyMaterial }) {
       </nav>
       <div className="space-y-4">
         {(content.sections || []).map((section, index) => (
-          <details id={`section-${index}`} key={index} open={index < 2} className="rounded-lg border border-white/8 bg-white/[0.03] p-4">
-            <summary className="cursor-pointer list-none text-lg font-semibold text-slate-100">{section.heading}</summary>
-            <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-300">
-              {section.bullets?.map((bullet, bulletIndex) => <li key={bulletIndex}>- {bullet}</li>)}
+          <details id={`section-${index}`} key={index} open={index < 2} className="study-card">
+            <summary className="font-heading cursor-pointer list-none text-lg font-semibold text-slate-50">{section.heading}</summary>
+            <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-300">
+              {section.bullets?.map((bullet, bulletIndex) => <li key={bulletIndex} className="border-l-2 border-orange-400/25 pl-3">{bullet}</li>)}
             </ul>
           </details>
         ))}
         {content.definitions && content.definitions.length > 0 && (
-          <div className="rounded-lg border border-white/8 bg-white/[0.03] p-4">
-            <h3 className="font-semibold text-slate-100">Definitions</h3>
+          <div className="study-card">
+            <h3 className="font-heading font-semibold text-slate-50">Definitions</h3>
             <div className="mt-3 grid gap-2">
               {content.definitions.map((item, index) => (
-                <div key={index} className="rounded-md bg-[#0B0F19]/70 p-3 text-sm">
+                <div key={index} className="surface-inset p-3 text-sm">
                   <span className="font-semibold text-orange-200">{item.term}: </span>
                   <span className="text-slate-300">{item.definition}</span>
                 </div>
@@ -636,8 +636,11 @@ function FlashcardView({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm text-slate-400">{cards.length} active-recall cards</div>
-        <button onClick={onShuffle} className="inline-flex h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.04] px-3 text-sm text-slate-300">
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
+          <Layers3 className="h-4 w-4 text-orange-300" />
+          {cards.length} active-recall cards
+        </div>
+        <button onClick={onShuffle} className="secondary-action h-9 px-3">
           <Shuffle className="h-4 w-4" />
           Shuffle
         </button>
@@ -647,17 +650,25 @@ function FlashcardView({
           const flipped = flippedCards.has(card.id);
           const marked = material.progress?.[card.id]?.marked_difficult;
           return (
-            <div key={card.id || index} className="min-h-56 rounded-lg border border-white/8 bg-white/[0.03] p-4">
-              <button type="button" onClick={() => onFlip(card.id)} className="flex h-36 w-full flex-col justify-center rounded-lg bg-[#0B0F19]/80 p-4 text-left transition hover:bg-[#0f1625]">
-                <div className="mb-2 text-xs uppercase tracking-[0.12em] text-orange-300">{card.topic || card.type}</div>
-                <div className="text-base font-medium leading-6 text-slate-100">{flipped ? card.back : card.front}</div>
+            <div key={card.id || index} className="study-card min-h-64">
+              <button type="button" onClick={() => onFlip(card.id)} className="flex h-44 w-full flex-col justify-center rounded-2xl border border-slate-700 bg-gradient-to-br from-[#0B1220] to-[#111827] p-5 text-left transition duration-300 hover:border-orange-400/35">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <span className="concept-chip">{card.topic || card.type}</span>
+                  <span className="rounded-full bg-slate-800 px-2 py-1 text-[11px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                    {flipped ? 'Answer' : 'Question'}
+                  </span>
+                </div>
+                <div className="font-heading text-lg font-semibold leading-7 text-slate-50">{flipped ? card.back : card.front}</div>
               </button>
               <div className="mt-3 flex items-center justify-between gap-2">
-                <span className="text-xs text-slate-500">{flipped ? 'Answer' : 'Question'}</span>
+                <span className="text-xs font-semibold text-slate-500">Memory strength</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-800">
+                  <div className={`h-full rounded-full ${marked ? 'w-1/3 bg-red-400' : 'w-2/3 bg-emerald-400'}`} />
+                </div>
                 <button
                   type="button"
                   onClick={() => onMark(card.id, !marked)}
-                  className={`rounded-full px-3 py-1 text-xs ${marked ? 'bg-red-500/15 text-red-200' : 'bg-white/[0.05] text-slate-400'}`}
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${marked ? 'bg-red-500/15 text-red-200' : 'bg-slate-800 text-slate-400'}`}
                 >
                   Difficult
                 </button>
@@ -692,11 +703,11 @@ function MCQView({
   const questions = material.content?.questions || [];
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-white/8 bg-white/[0.03] p-3 text-sm text-slate-300">
+      <div className="surface-inset mb-4 flex flex-wrap items-center gap-3 p-3 text-sm text-slate-300">
         <span className="inline-flex items-center gap-2"><Timer className="h-4 w-4 text-orange-300" /> {Math.floor(elapsedSeconds / 60)}:{String(elapsedSeconds % 60).padStart(2, '0')}</span>
         <span>{answeredCount}/{questionCount} answered</span>
         <span className="inline-flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-300" /> {score} correct</span>
-        <button onClick={onRetry} className="ml-auto inline-flex items-center gap-2 rounded-lg bg-white/[0.05] px-3 py-1.5 text-xs">
+        <button onClick={onRetry} className="ml-auto inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold">
           <RotateCcw className="h-3.5 w-3.5" />
           Retry
         </button>
@@ -706,12 +717,12 @@ function MCQView({
           const selected = answers[question.id];
           const answered = Boolean(selected);
           return (
-            <div key={question.id || index} className="rounded-lg border border-white/8 bg-white/[0.03] p-4">
+            <div key={question.id || index} className="study-card">
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="text-xs uppercase tracking-[0.12em] text-orange-300">Question {index + 1}</span>
                 <span className="text-xs text-slate-500">{question.topic || question.type}</span>
               </div>
-              <h3 className="text-base font-semibold leading-7 text-slate-100">{question.question}</h3>
+              <h3 className="font-heading text-base font-semibold leading-7 text-slate-50">{question.question}</h3>
               <div className="mt-3 grid gap-2 md:grid-cols-2">
                 {question.options.map((option) => {
                   const correct = option === question.correct_answer;
@@ -727,7 +738,7 @@ function MCQView({
                           ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-100'
                           : wrong
                             ? 'border-red-400/40 bg-red-500/10 text-red-100'
-                            : 'border-white/8 bg-[#0B0F19]/70 text-slate-300 hover:bg-white/[0.05]'
+                            : 'border-slate-700 bg-[#0B1220]/70 text-slate-300 hover:bg-slate-800'
                       }`}
                     >
                       {answered && correct && <CheckCircle2 className="h-4 w-4 shrink-0" />}
@@ -737,7 +748,7 @@ function MCQView({
                   );
                 })}
               </div>
-              {answered && <p className="mt-3 rounded-lg bg-[#0B0F19]/70 p-3 text-sm leading-6 text-slate-300">{question.explanation}</p>}
+              {answered && <p className="surface-inset mt-3 p-3 text-sm leading-6 text-slate-300">{question.explanation}</p>}
             </div>
           );
         })}
@@ -760,25 +771,29 @@ function RevisionView({ material }: { material: StudyMaterial }) {
         const Icon = block.icon;
         if (!block.items?.length) return null;
         return (
-          <div key={block.title} className="rounded-lg border border-white/8 bg-white/[0.03] p-4">
-            <h3 className="mb-3 flex items-center gap-2 font-semibold text-slate-100">
+          <div key={block.title} className="study-card">
+            <h3 className="font-heading mb-3 flex items-center gap-2 font-semibold text-slate-50">
               <Icon className="h-4 w-4 text-orange-300" />
               {block.title}
             </h3>
-            <ul className="space-y-2 text-sm leading-6 text-slate-300">
-              {block.items.map((item, index) => <li key={index}>- {item}</li>)}
+            <ul className="space-y-2 text-sm leading-7 text-slate-300">
+              {block.items.map((item, index) => <li key={index} className="border-l-2 border-orange-400/25 pl-3">{item}</li>)}
             </ul>
           </div>
         );
       })}
       {content.concept_map && content.concept_map.length > 0 && (
-        <div className="rounded-lg border border-white/8 bg-white/[0.03] p-4 lg:col-span-2">
-          <h3 className="mb-3 font-semibold text-slate-100">Concept Map</h3>
+        <div className="study-card lg:col-span-2">
+          <h3 className="font-heading mb-3 font-semibold text-slate-50">Concept Map</h3>
           <div className="grid gap-3 md:grid-cols-2">
             {content.concept_map.map((item, index) => (
-              <div key={index} className="rounded-lg bg-[#0B0F19]/70 p-3">
+              <div key={index} className="surface-inset p-4">
                 <div className="font-medium text-orange-200">{item.topic}</div>
-                <div className="mt-1 text-sm text-slate-400">{item.links?.join(' · ')}</div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {item.links?.map((link) => (
+                    <span key={link} className="cyan-chip">{link}</span>
+                  ))}
+                </div>
               </div>
             ))}
           </div>

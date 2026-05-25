@@ -422,18 +422,18 @@ function ChatContent() {
   if (!mounted || !token) return null;
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-[#0B0F19] text-slate-100 selection:bg-orange-500/30">
+    <div className="learning-shell">
       <Sidebar />
 
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="border-b border-white/8 bg-[#0B0F19]/80 px-5 py-4 backdrop-blur-xl md:px-8">
+        <div className="border-b border-slate-800 bg-[#0B1220]/95 px-5 py-4 md:px-8">
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 pl-12 md:pl-0">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-orange-300">
+              <div className="section-kicker">
                 <Sparkles className="h-3.5 w-3.5" />
-                AI Study Workspace
+                AI tutor workspace
               </div>
-              <h1 className="mt-1 truncate text-lg font-semibold text-slate-50">
+              <h1 className="font-heading mt-2 truncate text-xl font-semibold text-slate-50">
                 {activeGroups.length > 0 || activeDocuments.length > 0
                   ? `Using ${activeGroups.length + activeDocuments.length} context target${activeGroups.length + activeDocuments.length === 1 ? '' : 's'}`
                   : 'Ask across your notes or general concepts'}
@@ -444,7 +444,7 @@ function ChatContent() {
                   {activeGroups.map((group) => (
                     <span
                       key={`group-${group.id}`}
-                      className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-200"
+                      className="success-chip max-w-[220px]"
                     >
                       <Library className="h-3 w-3 shrink-0" />
                       <span className="truncate">@{group.slug}</span>
@@ -454,7 +454,7 @@ function ChatContent() {
                   {activeDocuments.map((document) => (
                     <span
                       key={`document-${document.id}`}
-                      className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 text-xs font-medium text-orange-200"
+                      className="concept-chip max-w-[220px]"
                     >
                       <FileText className="h-3 w-3 shrink-0" />
                       <span className="truncate">{document.filename}</span>
@@ -463,11 +463,11 @@ function ChatContent() {
                   ))}
                   </>
                 ) : (
-                  <span className="text-xs text-slate-500">No notes attached. Answers will use general knowledge only.</span>
+                  <span className="text-xs font-medium text-slate-500">No notes attached. Attach a PDF or @workspace for grounded tutoring.</span>
                 )}
               </div>
             </div>
-            <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 sm:flex">
+            <div className="hidden items-center gap-2 rounded-full border border-slate-700 bg-[#172033] px-3 py-1.5 text-xs font-semibold text-slate-400 sm:flex">
               <Library className="h-3.5 w-3.5 text-orange-400" />
               {groups.length} workspaces <span>&bull;</span> {documents.length} notes
             </div>
@@ -479,11 +479,11 @@ function ChatContent() {
             {messages.length === 0 ? (
               <div className="grid min-h-[58vh] place-items-center">
                 <div className="w-full max-w-2xl text-center">
-                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-orange-500/20 bg-orange-500/10 shadow-2xl shadow-orange-500/10">
-                    <Bot className="h-8 w-8 text-orange-400" />
+                  <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-gradient-to-br from-orange-500 to-amber-400 shadow-2xl shadow-orange-950/30">
+                    <Bot className="h-8 w-8 text-white" />
                   </div>
-                  <h2 className="mt-6 text-3xl font-semibold tracking-tight text-slate-50">What are we learning today?</h2>
-                  <p className="mx-auto mt-3 max-w-xl text-balance text-slate-400">
+                  <h2 className="font-heading mt-6 text-3xl font-bold tracking-normal text-slate-50 md:text-4xl">What are we learning today?</h2>
+                  <p className="mx-auto mt-3 max-w-xl text-balance text-slate-300">
                     Ask a concept question, reference a note with @, or upload a new PDF directly from the composer.
                   </p>
                   <div className="mt-8 grid gap-3 text-left sm:grid-cols-2">
@@ -496,7 +496,7 @@ function ChatContent() {
                       <button
                         key={prompt}
                         onClick={() => setInput(prompt)}
-                        className="rounded-2xl border border-white/8 bg-white/[0.04] p-4 text-sm text-slate-300 transition hover:border-orange-500/30 hover:bg-orange-500/10 hover:text-slate-100"
+                        className="study-card text-left text-sm leading-6 text-slate-300"
                       >
                         {prompt}
                       </button>
@@ -522,8 +522,8 @@ function ChatContent() {
                     <article
                       className={`min-w-0 max-w-[calc(100%-3rem)] overflow-hidden rounded-2xl px-4 py-3.5 shadow-xl sm:max-w-[78%] sm:px-5 sm:py-4 lg:max-w-[44rem] ${
                         message.role === 'user'
-                          ? 'rounded-br-md bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-orange-500/15'
-                          : 'rounded-bl-md border border-white/8 bg-[#111827]/90 text-slate-200 shadow-black/20 backdrop-blur'
+                          ? 'rounded-br-md border border-orange-300/25 bg-gradient-to-br from-orange-500 to-amber-400 text-white shadow-orange-950/25'
+                          : 'rounded-bl-md border border-slate-700/80 bg-[#172033] text-slate-200 shadow-black/20'
                       }`}
                     >
                       {message.role === 'user' ? (
@@ -536,6 +536,12 @@ function ChatContent() {
                         </div>
                       ) : (
                         <>
+                          <div className="mb-3 flex flex-wrap gap-2">
+                            <span className="concept-chip">Tutor answer</span>
+                            {message.retrieval_plan?.intent && (
+                              <span className="cyan-chip">{message.retrieval_plan.intent.replaceAll('-', ' ')}</span>
+                            )}
+                          </div>
                           <div className="drona-markdown overflow-hidden break-words">
                             <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
                               {message.content}
@@ -543,17 +549,17 @@ function ChatContent() {
                           </div>
 
                           {message.retrieval_plan && (
-                            <div className="mt-4 rounded-lg border border-white/8 bg-white/[0.03] p-3 text-xs text-slate-400">
+                            <div className="surface-inset mt-5 p-4 text-xs text-slate-400">
                               <div className="mb-2 flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                <span className="inline-flex items-center gap-1.5 font-bold uppercase tracking-[0.14em] text-slate-500">
                                   <Search className="h-3.5 w-3.5" />
                                   Retrieval trace
                                 </span>
-                                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-200">
+                                <span className="concept-chip py-0.5">
                                   {message.retrieval_plan.strategy?.replaceAll('_', ' ') || 'planned'}
                                 </span>
                                 {typeof message.retrieval_plan.confidence === 'number' && message.retrieval_plan.confidence > 0 && (
-                                  <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                                  <span className="topic-badge py-0.5">
                                     {Math.round(message.retrieval_plan.confidence * 100)}% confidence
                                   </span>
                                 )}
@@ -585,22 +591,23 @@ function ChatContent() {
                           )}
 
                           {message.sources && message.sources.length > 0 && (
-                            <div className="mt-4 border-t border-white/8 pt-3">
-                              <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                Sources used
+                            <div className="mt-5 border-t border-slate-700 pt-4">
+                              <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+                                <FileText className="h-3.5 w-3.5 text-orange-300" />
+                                Evidence cards
                               </div>
-                              <div className="flex flex-wrap gap-1.5">
+                              <div className="grid gap-2 sm:grid-cols-2">
                                 {message.sources.slice(0, 4).map((source) => (
                                   <details
                                     key={source.label}
-                                    className="group max-w-full rounded-lg border border-white/8 bg-white/[0.035] px-2.5 py-1.5 text-xs text-slate-400 open:basis-full"
+                                    className="group max-w-full rounded-xl border border-slate-700 bg-[#0B1220]/65 px-3 py-2 text-xs text-slate-400 open:sm:col-span-2"
                                   >
                                     <summary className="flex cursor-pointer list-none items-center gap-2">
-                                      <span className="font-semibold text-orange-300">[{source.label}]</span>
+                                      <span className="font-bold text-orange-300">[{source.label}]</span>
                                       <span className="max-w-[220px] truncate text-slate-300">
                                         {source.filename || (source.document_id ? documentNameById.get(source.document_id) : null) || 'Uploaded note'}
                                       </span>
-                                      <span className="ml-auto rounded-full bg-white/[0.05] px-1.5 py-0.5 text-slate-500">
+                                      <span className="ml-auto rounded-full bg-slate-800 px-1.5 py-0.5 text-slate-400">
                                         {source.relevance === 'high'
                                           ? 'High relevance'
                                           : source.relevance === 'medium'
@@ -608,7 +615,7 @@ function ChatContent() {
                                             : 'Relevant'}
                                       </span>
                                     </summary>
-                                    <div className="mt-2 border-t border-white/8 pt-2">
+                                    <div className="mt-2 border-t border-slate-700 pt-2">
                                       {source.section_heading && (
                                         <div className="mb-1 truncate font-medium text-slate-400">{source.section_heading}</div>
                                       )}
@@ -629,7 +636,7 @@ function ChatContent() {
                     </article>
 
                     {message.role === 'user' && (
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-white/10 bg-[#1E293B]">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-slate-700 bg-[#172033]">
                         <User className="h-4 w-4 text-slate-300" />
                       </div>
                     )}
@@ -641,11 +648,11 @@ function ChatContent() {
           </div>
         </div>
 
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/96 to-transparent px-4 pb-4 pt-12 md:px-8">
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0B1220] via-[#0B1220]/96 to-transparent px-4 pb-4 pt-12 md:px-8">
           <div className="pointer-events-auto mx-auto w-full max-w-4xl">
             {showMentionMenu && (filteredGroups.length > 0 || filteredDocs.length > 0) && (
-              <div className="mb-3 w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#111827]/95 shadow-2xl shadow-black/30 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2">
-                <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <div className="animate-in fade-in slide-in-from-bottom-2 mb-3 w-full max-w-md overflow-hidden rounded-2xl border border-slate-700 bg-[#111827] shadow-2xl shadow-black/30">
+                <div className="flex items-center gap-2 border-b border-slate-800 px-4 py-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
                   <Search className="h-3.5 w-3.5" />
                   Reference context
                 </div>
@@ -660,7 +667,7 @@ function ChatContent() {
                       key={`group-${group.id}`}
                       type="button"
                       onClick={() => selectGroup(group)}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-200 transition hover:bg-white/[0.05]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-200 transition hover:bg-slate-800"
                     >
                       <Library className="h-4 w-4 shrink-0 text-emerald-300" />
                       <span className="min-w-0 flex-1 truncate">@{group.slug}</span>
@@ -677,7 +684,7 @@ function ChatContent() {
                       key={document.id}
                       type="button"
                       onClick={() => selectDocument(document)}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-200 transition hover:bg-white/[0.05]"
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-200 transition hover:bg-slate-800"
                     >
                       <FileText className="h-4 w-4 shrink-0 text-orange-400" />
                       <span className="truncate">{document.filename}</span>
@@ -692,7 +699,7 @@ function ChatContent() {
                 {activeGroups.map((group) => (
                   <div
                     key={`group-chip-${group.id}`}
-                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-200 shadow-lg shadow-emerald-500/10 backdrop-blur"
+                    className="success-chip max-w-full text-sm"
                   >
                     <Library className="h-3.5 w-3.5 shrink-0" />
                     <span className="max-w-[220px] truncate font-medium">@{group.slug}</span>
@@ -710,7 +717,7 @@ function ChatContent() {
                 {activeDocuments.map((document) => (
                   <div
                     key={document.id}
-                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-orange-500/25 bg-orange-500/10 px-3 py-1.5 text-sm text-orange-200 shadow-lg shadow-orange-500/10 backdrop-blur"
+                    className="concept-chip max-w-full text-sm"
                   >
                     <FileText className="h-3.5 w-3.5 shrink-0" />
                     <span className="max-w-[220px] truncate font-medium">{document.filename}</span>
@@ -729,7 +736,7 @@ function ChatContent() {
 
             <form
               onSubmit={handleSubmit}
-              className="rounded-[2rem] border border-white/10 bg-[#111827]/92 p-2 shadow-2xl shadow-black/35 backdrop-blur-xl transition focus-within:border-orange-500/40 focus-within:ring-4 focus-within:ring-orange-500/10"
+              className="rounded-[1.75rem] border border-slate-700 bg-[#172033] p-2 shadow-2xl shadow-black/35 transition focus-within:border-orange-400/50 focus-within:ring-4 focus-within:ring-orange-500/10"
             >
               <div className="flex items-end gap-2">
                 <input
@@ -749,7 +756,7 @@ function ChatContent() {
                   variant="ghost"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploadMutation.isPending}
-                  className="mb-1 h-10 w-10 rounded-full text-slate-400 hover:bg-white/8 hover:text-orange-300"
+                  className="mb-1 h-10 w-10 rounded-full text-slate-400 hover:bg-slate-800 hover:text-orange-300"
                   aria-label="Upload note"
                 >
                   {uploadMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
@@ -764,15 +771,15 @@ function ChatContent() {
                       handleSubmit();
                     }
                   }}
-                  placeholder="Message DronaAI... use @ to focus a note"
-                  className="max-h-[180px] min-h-12 resize-none border-0 bg-transparent px-1 py-3 text-[15px] leading-6 text-slate-100 shadow-none outline-none placeholder:text-slate-500 focus-visible:border-0 focus-visible:ring-0"
+                  placeholder="Ask DronaAI... use @ to focus a note or workspace"
+                  className="max-h-[180px] min-h-12 resize-none border-0 bg-transparent px-1 py-3 text-[15px] leading-7 text-slate-100 shadow-none outline-none placeholder:text-slate-500 focus-visible:border-0 focus-visible:ring-0"
                   disabled={isLoading}
                 />
                 <Button
                   type="submit"
                   size="icon-lg"
                   disabled={!input.trim() || isLoading}
-                  className="mb-1 h-10 w-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 transition hover:brightness-110 disabled:shadow-none"
+                  className="mb-1 h-10 w-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-white shadow-lg shadow-orange-950/25 transition hover:brightness-110 disabled:shadow-none"
                   aria-label="Send message"
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="ml-0.5 h-4 w-4" />}
@@ -780,7 +787,7 @@ function ChatContent() {
               </div>
             </form>
             <p className="mt-3 text-center text-xs font-medium text-slate-500">
-              DronaAI prioritizes your notes, adds general knowledge when useful, and can still make mistakes.
+              DronaAI prioritizes your notes, cites evidence when available, and can still make mistakes.
             </p>
           </div>
         </div>
@@ -794,7 +801,7 @@ export default function ChatPage() {
     <Suspense
       fallback={
         <div className="flex h-screen items-center justify-center bg-[#0B0F19]">
-          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+          <Loader2 className="h-8 w-8 animate-spin text-orange-400" />
         </div>
       }
     >

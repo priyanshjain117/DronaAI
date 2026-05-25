@@ -3,8 +3,8 @@ import "./globals.css";
 import Providers from "@/components/Providers";
 
 export const metadata: Metadata = {
-  title: "DronaAI - Study Assistant",
-  description: "Your AI-Powered Study Companion",
+  title: "DronaAI - AI Learning OS",
+  description: "A premium AI workspace for serious students.",
 };
 
 export default function RootLayout({
@@ -16,8 +16,9 @@ export default function RootLayout({
     <html
       lang="en"
       className="h-full antialiased dark"
+      suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#0B0F19] text-slate-50 font-sans selection:bg-orange-500/30 selection:text-orange-200">
+      <body className="min-h-full flex flex-col bg-[#0B1220] text-slate-50 font-sans selection:bg-orange-500/30 selection:text-orange-100">
         <Providers>
           {children}
         </Providers>
