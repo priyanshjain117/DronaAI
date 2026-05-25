@@ -6,7 +6,7 @@ import { useStore } from '@/store/useStore';
 import { api } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { BrainCircuit, BookOpen, Clock, Activity, Loader2 } from 'lucide-react';
+import { BrainCircuit, BookOpen, Clock, Activity, Loader2, Library, Plus, Trash2 } from 'lucide-react';
 import { motion, type Variants } from 'framer-motion';
 import Sidebar from '@/components/Sidebar';
 import UploadDropzone from '@/components/UploadDropzone';
@@ -20,6 +20,16 @@ interface Document {
   updated_at?: string;
   status?: string;
   chunk_count?: number;
+}
+
+interface Group {
+  id: number;
+  name: string;
+  slug: string;
+  color?: string;
+  doc_count: number;
+  documents?: Document[];
+  updated_at?: string;
 }
 
 const containerVariants: Variants = {
@@ -37,10 +47,13 @@ const itemVariants: Variants = {
 
 export default function DashboardPage() {
   const token = useStore((state) => state.token);
+  const user = useStore((state) => state.user);
   const router = useRouter();
   const queryClient = useQueryClient();
   const [uploadError, setUploadError] = useState('');
   const [mounted, setMounted] = useState(false);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<number[]>([]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 0);
@@ -54,12 +67,24 @@ export default function DashboardPage() {
   }, [token, router, mounted]);
 
   const { data: documents, isLoading: isLoadingDocs } = useQuery<Document[]>({
-    queryKey: ['documents'],
+    queryKey: ['documents', user?.id],
     queryFn: async () => {
       const { data } = await api.get('/upload/');
       return data;
     },
-    enabled: !!token,
+    enabled: !!token && !!user,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: groups = [] } = useQuery<Group[]>({
+    queryKey: ['document-groups', user?.id],
+    queryFn: async () => {
+      const { data } = await api.get('/groups/');
+      return data;
+    },
+    enabled: !!token && !!user,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -75,12 +100,13 @@ export default function DashboardPage() {
       return data;
     },
     onSuccess: (document: Document) => {
-      queryClient.setQueryData<Document[]>(['documents'], (current = []) => [
+      queryClient.setQueryData<Document[]>(['documents', user?.id], (current = []) => [
         document,
         ...current.filter((item) => item.id !== document.id),
       ]);
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['document-groups'] });
     },
     onError: (error: unknown) => {
       const apiError = error as { response?: { data?: { detail?: string } } };
@@ -94,20 +120,47 @@ export default function DashboardPage() {
       return data;
     },
     onMutate: async (id: number) => {
-      await queryClient.cancelQueries({ queryKey: ['documents'] });
-      const previousDocuments = queryClient.getQueryData<Document[]>(['documents']);
-      queryClient.setQueryData<Document[]>(['documents'], (current = []) =>
+      await queryClient.cancelQueries({ queryKey: ['documents', user?.id] });
+      const previousDocuments = queryClient.getQueryData<Document[]>(['documents', user?.id]);
+      queryClient.setQueryData<Document[]>(['documents', user?.id], (current = []) =>
         current.filter((document) => document.id !== id)
       );
       return { previousDocuments };
     },
     onError: (_error, _id, context) => {
       if (context?.previousDocuments) {
-        queryClient.setQueryData(['documents'], context.previousDocuments);
+        queryClient.setQueryData(['documents', user?.id], context.previousDocuments);
       }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['document-groups'] });
+    },
+  });
+
+  const createGroupMutation = useMutation({
+    mutationFn: async () => {
+      const { data } = await api.post('/groups/', {
+        name: newGroupName.trim(),
+        document_ids: selectedDocumentIds,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      setNewGroupName('');
+      setSelectedDocumentIds([]);
+      queryClient.invalidateQueries({ queryKey: ['document-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+    },
+  });
+
+  const deleteGroupMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/groups/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-groups'] });
       queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
     },
   });
@@ -192,6 +245,91 @@ export default function DashboardPage() {
 
             {/* Documents List */}
             <motion.div variants={itemVariants} className="col-span-1 md:col-span-3 lg:col-span-4 mt-6">
+              <Card className="mb-6 bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+                    <Library className="h-5 w-5 text-emerald-300" />
+                    Workspaces
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Group notes into focused study spaces and mention them in chat with @.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-3 md:flex-row">
+                    <input
+                      value={newGroupName}
+                      onChange={(event) => setNewGroupName(event.target.value)}
+                      placeholder="Create @workspace, e.g. nlp-notes"
+                      className="h-11 flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm text-slate-100 outline-none placeholder:text-slate-500 focus:border-emerald-400/40 focus:ring-2 focus:ring-emerald-400/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => createGroupMutation.mutate()}
+                      disabled={!newGroupName.trim() || createGroupMutation.isPending}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {createGroupMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      Create Workspace
+                    </button>
+                  </div>
+                  {documents && documents.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {documents.map((document) => {
+                        const selected = selectedDocumentIds.includes(document.id);
+                        return (
+                          <button
+                            key={document.id}
+                            type="button"
+                            onClick={() =>
+                              setSelectedDocumentIds((current) =>
+                                selected ? current.filter((id) => id !== document.id) : [...current, document.id]
+                              )
+                            }
+                            className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                              selected
+                                ? 'border-emerald-400/40 bg-emerald-400/10 text-emerald-200'
+                                : 'border-white/10 bg-white/[0.03] text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {document.filename}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {groups.length > 0 && (
+                    <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {groups.map((group) => (
+                        <div key={group.id} className="rounded-xl border border-white/8 bg-white/[0.035] p-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-slate-100">@{group.slug}</div>
+                              <div className="mt-1 text-xs text-slate-500">{group.doc_count} docs</div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => deleteGroupMutation.mutate(group.id)}
+                              className="rounded-lg p-1.5 text-slate-500 transition hover:bg-red-500/10 hover:text-red-400"
+                              aria-label={`Delete ${group.name}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="mt-3 space-y-1">
+                            {group.documents?.slice(0, 3).map((document) => (
+                              <div key={document.id} className="truncate text-xs text-slate-500">
+                                {document.filename}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               <Card className="bg-[#111827]/80 backdrop-blur-md border-white/5 shadow-2xl flex flex-col min-h-[400px]">
                 <CardHeader>
                   <CardTitle className="text-lg font-semibold text-slate-100 flex items-center gap-2">

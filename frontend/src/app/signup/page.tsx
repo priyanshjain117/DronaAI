@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { BrainCircuit, Loader2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -20,6 +21,7 @@ export default function SignupPage() {
   const token = useStore((state) => state.token);
   const setToken = useStore((state) => state.setToken);
   const setUser = useStore((state) => state.setUser);
+  const queryClient = useQueryClient();
   const router = useRouter();
 
   useEffect(() => {
@@ -41,6 +43,7 @@ export default function SignupPage() {
 
     try {
       const response = await api.post('/auth/signup', { email, password });
+      queryClient.clear();
       setToken(response.data.access_token);
       setUser(response.data.user);
       const next = new URLSearchParams(window.location.search).get('next') || '/dashboard';

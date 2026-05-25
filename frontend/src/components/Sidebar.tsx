@@ -7,6 +7,7 @@ import {
   BrainCircuit,
   MessageSquare,
   LayoutDashboard,
+  GraduationCap,
   Plus,
   LogOut,
   Menu,
@@ -16,6 +17,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   FileText,
+  Library,
 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,6 +31,7 @@ interface ChatSessionItem {
   message_count: number;
   document_id?: number | null;
   documents?: { id: number; filename: string }[];
+  groups?: { id: number; name: string; slug: string; doc_count?: number }[];
 }
 
 interface DocumentItem {
@@ -37,12 +40,22 @@ interface DocumentItem {
   created_at: string;
 }
 
+interface GroupItem {
+  id: number;
+  name: string;
+  slug: string;
+  color?: string;
+  doc_count?: number;
+  updated_at?: string;
+}
+
 function SidebarInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const activeSessionId = searchParams.get('session');
   const logout = useStore((state) => state.logout);
   const token = useStore((state) => state.token);
+  const user = useStore((state) => state.user);
   const collapsed = useStore((state) => state.sidebarCollapsed);
   const setCollapsed = useStore((state) => state.setSidebarCollapsed);
   const router = useRouter();
@@ -51,24 +64,36 @@ function SidebarInner() {
   const [query, setQuery] = useState('');
 
   const { data: sessions = [] } = useQuery<ChatSessionItem[]>({
-    queryKey: ['chat-sessions'],
+    queryKey: ['chat-sessions', user?.id],
     queryFn: async () => {
       const { data } = await api.get('/sessions/');
       return data;
     },
-    enabled: !!token,
+    enabled: !!token && !!user,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
   });
 
   const { data: documents = [] } = useQuery<DocumentItem[]>({
-    queryKey: ['documents'],
+    queryKey: ['documents', user?.id],
     queryFn: async () => {
       const { data } = await api.get('/upload/');
       return data;
     },
-    enabled: !!token,
+    enabled: !!token && !!user,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+  });
+
+  const { data: groups = [] } = useQuery<GroupItem[]>({
+    queryKey: ['document-groups', user?.id],
+    queryFn: async () => {
+      const { data } = await api.get('/groups/');
+      return data;
+    },
+    enabled: !!token && !!user,
     staleTime: 0,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -87,6 +112,25 @@ function SidebarInner() {
       : documents;
     return docs.slice(0, 6);
   }, [documents, query]);
+
+  const filteredGroups = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    const items = normalized
+      ? groups.filter((group) => `${group.name} ${group.slug}`.toLowerCase().includes(normalized))
+      : groups;
+    return items.slice(0, 8);
+  }, [groups, query]);
+
+  const attachDocumentToGroupMutation = useMutation({
+    mutationFn: async ({ groupId, documentId }: { groupId: number; documentId: number }) => {
+      await api.post(`/groups/${groupId}/documents/${documentId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['document-groups'] });
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+    },
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -184,7 +228,46 @@ function SidebarInner() {
             <MessageSquare className="h-5 w-5 shrink-0" />
             <span className={`${collapsed ? 'sr-only' : ''}`}>Chats</span>
           </Link>
+
+          <Link
+            href="/study"
+            onClick={() => setMobileOpen(false)}
+            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${
+              pathname === '/study'
+                ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/20'
+                : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-200'
+            } ${collapsed ? 'justify-center px-0' : ''}`}
+          >
+            <GraduationCap className="h-5 w-5 shrink-0" />
+            <span className={`${collapsed ? 'sr-only' : ''}`}>Study</span>
+          </Link>
         </div>
+
+        {!collapsed && filteredGroups.length > 0 && (
+          <div className="mt-6">
+            <div className="mb-2 px-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Workspaces</div>
+            <div className="space-y-1">
+              {filteredGroups.map((group) => (
+                <Link
+                  href={`/chat?group=${group.id}`}
+                  key={group.id}
+                  onClick={() => setMobileOpen(false)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    const documentId = Number(event.dataTransfer.getData('application/drona-document-id'));
+                    if (documentId) attachDocumentToGroupMutation.mutate({ groupId: group.id, documentId });
+                  }}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
+                >
+                  <Library className="h-4 w-4 shrink-0 text-emerald-300" />
+                  <span className="min-w-0 flex-1 truncate">@{group.slug}</span>
+                  <span className="text-xs text-slate-600">{group.doc_count || 0}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {!collapsed && filteredDocuments.length > 0 && (
           <div className="mt-6">
@@ -195,6 +278,11 @@ function SidebarInner() {
                   href={`/chat?document=${document.id}`}
                   key={document.id}
                   onClick={() => setMobileOpen(false)}
+                  draggable
+                  onDragStart={(event) => {
+                    event.dataTransfer.setData('application/drona-document-id', String(document.id));
+                    event.dataTransfer.effectAllowed = 'copy';
+                  }}
                   className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-slate-400 transition hover:bg-white/[0.04] hover:text-slate-200"
                 >
                   <FileText className="h-4 w-4 shrink-0 text-orange-400" />
@@ -225,9 +313,16 @@ function SidebarInner() {
                       <span>{session.message_count} msgs</span>
                       <span>&bull;</span>
                       <span>{session.documents?.length || 0} notes</span>
+                      {session.groups && session.groups.length > 0 && (
+                        <>
+                          <span>&bull;</span>
+                          <span>{session.groups.length} spaces</span>
+                        </>
+                      )}
                     </div>
                     <div className="mt-0.5 truncate text-xs text-slate-600">
-                      {session.documents?.map((document) => document.filename).join(', ') ||
+                      {session.groups?.map((group) => `@${group.slug}`).join(', ') ||
+                        session.documents?.map((document) => document.filename).join(', ') ||
                         formatTimestamp(session.updated_at)}
                     </div>
                   </Link>

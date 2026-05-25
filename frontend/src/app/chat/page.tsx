@@ -33,12 +33,29 @@ interface Source {
   confidence?: number;
   relevance?: 'high' | 'medium' | 'low';
   snippet?: string;
+  topic?: string | null;
+  chunk_type?: string | null;
+  document_type?: string | null;
+}
+
+interface RetrievalPlan {
+  intent?: string;
+  scope?: string;
+  strategy?: string;
+  reason?: string;
+  document_count?: number;
+  workspace_count?: number;
+  retrieved_count?: number;
+  confidence?: number;
+  documents?: { id: number; filename: string }[];
+  workspaces?: { id: number; slug: string; name: string }[];
 }
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  retrieval_plan?: RetrievalPlan;
 }
 
 interface DocumentItem {
@@ -48,19 +65,33 @@ interface DocumentItem {
   chunk_count?: number;
 }
 
+interface GroupItem {
+  id: number;
+  name: string;
+  slug: string;
+  mention?: string;
+  color?: string;
+  doc_count?: number;
+  documents?: DocumentItem[];
+  updated_at?: string;
+}
+
 interface SessionMessage {
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
+  retrieval_plan?: RetrievalPlan;
 }
 
 function ChatContent() {
   const token = useStore((state) => state.token);
+  const user = useStore((state) => state.user);
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const sessionIdParam = searchParams.get('session');
   const documentIdParam = searchParams.get('document');
+  const groupIdParam = searchParams.get('group');
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -72,6 +103,7 @@ function ChatContent() {
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [activeDocuments, setActiveDocuments] = useState<DocumentItem[]>([]);
+  const [activeGroups, setActiveGroups] = useState<GroupItem[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -88,13 +120,36 @@ function ChatContent() {
     setActiveDocuments((prev) => prev.filter((document) => document.id !== documentId));
   }, []);
 
+  const addActiveGroup = useCallback((group: GroupItem) => {
+    setActiveGroups((prev) => {
+      if (prev.some((item) => item.id === group.id)) return prev;
+      return [...prev, group];
+    });
+  }, []);
+
+  const removeActiveGroup = useCallback((groupId: number) => {
+    setActiveGroups((prev) => prev.filter((group) => group.id !== groupId));
+  }, []);
+
   const { data: documents = [] } = useQuery<DocumentItem[]>({
-    queryKey: ['documents'],
+    queryKey: ['documents', user?.id],
     queryFn: async () => {
       const { data } = await api.get('/upload/');
       return data;
     },
-    enabled: !!token,
+    enabled: !!token && !!user,
+  });
+
+  const { data: groups = [] } = useQuery<GroupItem[]>({
+    queryKey: ['document-groups', user?.id],
+    queryFn: async () => {
+      const { data } = await api.get('/groups/');
+      return data;
+    },
+    enabled: !!token && !!user,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const uploadMutation = useMutation({
@@ -110,6 +165,7 @@ function ChatContent() {
     onSuccess: (document) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] });
       queryClient.invalidateQueries({ queryKey: ['chat-sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['document-groups'] });
       addActiveDocument({ id: document.id, filename: document.filename, status: document.status, chunk_count: document.chunks });
     },
   });
@@ -123,6 +179,12 @@ function ChatContent() {
       document.filename.toLowerCase().includes(mentionQuery.toLowerCase())
     );
   }, [documents, mentionQuery]);
+
+  const filteredGroups = useMemo(() => {
+    return groups.filter((group) =>
+      `${group.name} ${group.slug}`.toLowerCase().includes(mentionQuery.toLowerCase())
+    );
+  }, [groups, mentionQuery]);
 
   useEffect(() => {
     const id = window.setTimeout(() => setMounted(true), 0);
@@ -149,6 +211,15 @@ function ChatContent() {
   }, [documentIdParam, documents, addActiveDocument]);
 
   useEffect(() => {
+    const groupId = groupIdParam ? Number(groupIdParam) : null;
+    if (!groupId) return;
+    const group = groups.find((item) => item.id === groupId);
+    if (!group) return;
+    const id = window.setTimeout(() => addActiveGroup(group), 0);
+    return () => window.clearTimeout(id);
+  }, [groupIdParam, groups, addActiveGroup]);
+
+  useEffect(() => {
     if (currentSessionId && token && !isLoading) {
       api
         .get(`/sessions/${currentSessionId}`)
@@ -161,6 +232,7 @@ function ChatContent() {
             }))
           );
           setActiveDocuments(data.documents || []);
+          setActiveGroups(data.groups || []);
         })
         .catch(() => {
           setMessages([]);
@@ -171,10 +243,11 @@ function ChatContent() {
       const id = window.setTimeout(() => {
         setMessages([]);
         if (!documentIdParam) setActiveDocuments([]);
+        if (!groupIdParam) setActiveGroups([]);
       }, 0);
       return () => window.clearTimeout(id);
     }
-  }, [currentSessionId, token, isLoading, documents, router, documentIdParam]);
+  }, [currentSessionId, token, isLoading, documents, router, documentIdParam, groupIdParam]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -229,6 +302,7 @@ function ChatContent() {
           message: userMsg,
           session_id: currentSessionId,
           document_ids: activeDocuments.map((document) => document.id),
+          group_ids: activeGroups.map((group) => group.id),
         }),
       });
 
@@ -275,7 +349,11 @@ function ChatContent() {
                 const assistantIndex = next.findLastIndex((message) => message.role === 'assistant');
                 if (assistantIndex === -1) return next;
 
-                const assistantMessage = { ...next[assistantIndex], sources: parsed.sources };
+                const assistantMessage = {
+                  ...next[assistantIndex],
+                  sources: parsed.sources,
+                  retrieval_plan: parsed.retrieval_plan || next[assistantIndex].retrieval_plan,
+                };
                 next[assistantIndex] = assistantMessage;
                 return next;
               });
@@ -283,6 +361,10 @@ function ChatContent() {
             if (Array.isArray(parsed.active_document_ids)) {
               const activeIds = new Set<number>(parsed.active_document_ids);
               setActiveDocuments((prev) => prev.filter((document) => activeIds.has(document.id)));
+            }
+            if (Array.isArray(parsed.active_group_ids)) {
+              const activeIds = new Set<number>(parsed.active_group_ids);
+              setActiveGroups((prev) => prev.filter((group) => activeIds.has(group.id)));
             }
             continue;
           }
@@ -329,6 +411,14 @@ function ChatContent() {
     textareaRef.current?.focus();
   };
 
+  const selectGroup = (group: GroupItem) => {
+    addActiveGroup(group);
+    setShowMentionMenu(false);
+    const lastAtPos = input.lastIndexOf('@');
+    if (lastAtPos !== -1) setInput(input.slice(0, lastAtPos).trimStart());
+    textareaRef.current?.focus();
+  };
+
   if (!mounted || !token) return null;
 
   return (
@@ -344,22 +434,34 @@ function ChatContent() {
                 AI Study Workspace
               </div>
               <h1 className="mt-1 truncate text-lg font-semibold text-slate-50">
-                {activeDocuments.length > 0
-                  ? `Workspace using ${activeDocuments.length} note${activeDocuments.length === 1 ? '' : 's'}`
+                {activeGroups.length > 0 || activeDocuments.length > 0
+                  ? `Using ${activeGroups.length + activeDocuments.length} context target${activeGroups.length + activeDocuments.length === 1 ? '' : 's'}`
                   : 'Ask across your notes or general concepts'}
               </h1>
               <div className="mt-2 flex max-w-3xl flex-wrap gap-2">
-                {activeDocuments.length > 0 ? (
-                  activeDocuments.map((document) => (
+                {activeGroups.length > 0 || activeDocuments.length > 0 ? (
+                  <>
+                  {activeGroups.map((group) => (
                     <span
-                      key={document.id}
+                      key={`group-${group.id}`}
+                      className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-200"
+                    >
+                      <Library className="h-3 w-3 shrink-0" />
+                      <span className="truncate">@{group.slug}</span>
+                      <span className="text-emerald-200/60">{group.doc_count || group.documents?.length || 0} docs</span>
+                    </span>
+                  ))}
+                  {activeDocuments.map((document) => (
+                    <span
+                      key={`document-${document.id}`}
                       className="inline-flex max-w-[220px] items-center gap-1.5 rounded-full border border-orange-500/25 bg-orange-500/10 px-2.5 py-1 text-xs font-medium text-orange-200"
                     >
                       <FileText className="h-3 w-3 shrink-0" />
                       <span className="truncate">{document.filename}</span>
                       <span className="text-orange-200/60">{document.chunk_count ? `${document.chunk_count} chunks` : 'indexed'}</span>
                     </span>
-                  ))
+                  ))}
+                  </>
                 ) : (
                   <span className="text-xs text-slate-500">No notes attached. Answers will use general knowledge only.</span>
                 )}
@@ -367,7 +469,7 @@ function ChatContent() {
             </div>
             <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs text-slate-400 sm:flex">
               <Library className="h-3.5 w-3.5 text-orange-400" />
-              {documents.length} indexed notes
+              {groups.length} workspaces <span>&bull;</span> {documents.length} notes
             </div>
           </div>
         </div>
@@ -440,6 +542,48 @@ function ChatContent() {
                             </ReactMarkdown>
                           </div>
 
+                          {message.retrieval_plan && (
+                            <div className="mt-4 rounded-lg border border-white/8 bg-white/[0.03] p-3 text-xs text-slate-400">
+                              <div className="mb-2 flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                  <Search className="h-3.5 w-3.5" />
+                                  Retrieval trace
+                                </span>
+                                <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-orange-200">
+                                  {message.retrieval_plan.strategy?.replaceAll('_', ' ') || 'planned'}
+                                </span>
+                                {typeof message.retrieval_plan.confidence === 'number' && message.retrieval_plan.confidence > 0 && (
+                                  <span className="rounded-full bg-white/[0.05] px-2 py-0.5">
+                                    {Math.round(message.retrieval_plan.confidence * 100)}% confidence
+                                  </span>
+                                )}
+                              </div>
+                              <div className="grid gap-2 sm:grid-cols-3">
+                                <div>
+                                  <span className="text-slate-500">Intent</span>
+                                  <div className="mt-0.5 truncate text-slate-300">
+                                    {message.retrieval_plan.intent?.replaceAll('-', ' ') || 'general'}
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Scope</span>
+                                  <div className="mt-0.5 truncate text-slate-300">
+                                    {message.retrieval_plan.scope || 'none'} · {message.retrieval_plan.document_count || 0} docs
+                                  </div>
+                                </div>
+                                <div>
+                                  <span className="text-slate-500">Evidence</span>
+                                  <div className="mt-0.5 truncate text-slate-300">
+                                    {message.retrieval_plan.retrieved_count || 0} chunks
+                                  </div>
+                                </div>
+                              </div>
+                              {message.retrieval_plan.reason && (
+                                <p className="mt-2 line-clamp-2 leading-5 text-slate-500">{message.retrieval_plan.reason}</p>
+                              )}
+                            </div>
+                          )}
+
                           {message.sources && message.sources.length > 0 && (
                             <div className="mt-4 border-t border-white/8 pt-3">
                               <div className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
@@ -468,6 +612,11 @@ function ChatContent() {
                                       {source.section_heading && (
                                         <div className="mb-1 truncate font-medium text-slate-400">{source.section_heading}</div>
                                       )}
+                                      {source.topic && (
+                                        <div className="mb-1 truncate text-[11px] uppercase tracking-[0.12em] text-orange-300/70">
+                                          {source.topic}
+                                        </div>
+                                      )}
                                       {source.snippet && <p className="line-clamp-3 leading-5 text-slate-500">{source.snippet}</p>}
                                     </div>
                                   </details>
@@ -494,13 +643,35 @@ function ChatContent() {
 
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#0B0F19] via-[#0B0F19]/96 to-transparent px-4 pb-4 pt-12 md:px-8">
           <div className="pointer-events-auto mx-auto w-full max-w-4xl">
-            {showMentionMenu && filteredDocs.length > 0 && (
+            {showMentionMenu && (filteredGroups.length > 0 || filteredDocs.length > 0) && (
               <div className="mb-3 w-full max-w-md overflow-hidden rounded-2xl border border-white/10 bg-[#111827]/95 shadow-2xl shadow-black/30 backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2">
                 <div className="flex items-center gap-2 border-b border-white/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                   <Search className="h-3.5 w-3.5" />
-                  Reference a note
+                  Reference context
                 </div>
                 <div className="max-h-52 overflow-y-auto p-1">
+                  {filteredGroups.length > 0 && (
+                    <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Workspaces
+                    </div>
+                  )}
+                  {filteredGroups.slice(0, 6).map((group) => (
+                    <button
+                      key={`group-${group.id}`}
+                      type="button"
+                      onClick={() => selectGroup(group)}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-200 transition hover:bg-white/[0.05]"
+                    >
+                      <Library className="h-4 w-4 shrink-0 text-emerald-300" />
+                      <span className="min-w-0 flex-1 truncate">@{group.slug}</span>
+                      <span className="text-xs text-slate-500">{group.doc_count || group.documents?.length || 0} docs</span>
+                    </button>
+                  ))}
+                  {filteredDocs.length > 0 && (
+                    <div className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+                      Documents
+                    </div>
+                  )}
                   {filteredDocs.map((document) => (
                     <button
                       key={document.id}
@@ -516,8 +687,26 @@ function ChatContent() {
               </div>
             )}
 
-            {activeDocuments.length > 0 && (
+            {(activeGroups.length > 0 || activeDocuments.length > 0) && (
               <div className="mb-3 flex max-w-full flex-wrap gap-2">
+                {activeGroups.map((group) => (
+                  <div
+                    key={`group-chip-${group.id}`}
+                    className="inline-flex max-w-full items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-200 shadow-lg shadow-emerald-500/10 backdrop-blur"
+                  >
+                    <Library className="h-3.5 w-3.5 shrink-0" />
+                    <span className="max-w-[220px] truncate font-medium">@{group.slug}</span>
+                    <span className="text-emerald-200/60">{group.doc_count || group.documents?.length || 0} docs</span>
+                    <button
+                      type="button"
+                      onClick={() => removeActiveGroup(group.id)}
+                      className="rounded-full p-0.5 transition hover:bg-emerald-400/20"
+                      aria-label={`Remove ${group.name} from workspace`}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
                 {activeDocuments.map((document) => (
                   <div
                     key={document.id}
